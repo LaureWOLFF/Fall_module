@@ -18,7 +18,7 @@ public class Main {
             AuthService auth = new AuthService();
             BluetoothService ble = Config.USE_MOCK_BLUETOOTH
                     ? new MockBluetoothService()
-                    : new SimpleBleService();
+                    : new SimpleBleService();   
 
             new LoginFrame(auth, ble).setVisible(true);
         });

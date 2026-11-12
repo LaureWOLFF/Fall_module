@@ -5,12 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="009fdf8b-d26f-450d-97b7-91f133090639" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/utils/AppExit.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/esp32/ble/SimpleBleService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/ble/SimpleBleService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/esp32/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/Main.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/example/esp32/ui/LoginFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/ui/LoginFrame.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/example/esp32/ui/MainFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/ui/MainFrame.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ble/SimpleBleService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ble/SimpleBleService.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/LoginFrame.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/LoginFrame.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$1.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$2.class" afterDir="false" />
@@ -139,6 +137,7 @@
       <workItem from="1794400764121" duration="423000" />
       <workItem from="1794401243284" duration="623000" />
       <workItem from="1794466536723" duration="2080000" />
+      <workItem from="1794468858848" duration="1768000" />
     </task>
     <servers />
   </component>

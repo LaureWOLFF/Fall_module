@@ -5,6 +5,7 @@ import com.example.esp32.ble.BleDevice;
 import com.example.esp32.ble.BluetoothService;
 import com.example.esp32.model.PayloadBuilder;
 import com.example.esp32.utils.AppExit;
+import com.example.esp32.auth.AuthService;
 
 import javax.swing.*;
 import java.awt.*;
@@ -24,6 +25,9 @@ public class MainFrame extends JFrame {
     private final DefaultListModel<BleDevice> deviceModel = new DefaultListModel<>();
     private final JList<BleDevice> deviceList = new JList<>(deviceModel);
 
+    private final AuthService auth;
+    private final String username;
+
     private final JButton scanBtn = new JButton("Scanner");
     private final JButton connectBtn = new JButton("Connecter");
     private final JButton disconnectBtn = new JButton("Déconnecter");
@@ -41,8 +45,10 @@ public class MainFrame extends JFrame {
     });
     private volatile boolean wasConnected = false;
 
-    public MainFrame(String username, BluetoothService ble) {
+    public MainFrame(String username, AuthService auth, BluetoothService ble) {
         super("ESP32-C6 Controller - " + username);
+        this.username = username;
+        this.auth = auth;
         this.ble = ble;
         buildUI();
         updateButtons();
@@ -63,6 +69,7 @@ public class MainFrame extends JFrame {
         add(buildDevicePanel(), BorderLayout.WEST);
         add(buildFormPanel(), BorderLayout.CENTER);
         add(buildLogPanel(), BorderLayout.SOUTH);
+        add(buildTopBar(), BorderLayout.NORTH);
 
         scanBtn.addActionListener(e -> onScan());
         connectBtn.addActionListener(e -> onConnect());
@@ -150,6 +157,46 @@ public class MainFrame extends JFrame {
         statusLabel.setText("Non connecté");
         log("Déconnecté.");
         updateButtons();
+    }
+
+    private JPanel buildTopBar() {
+        JLabel who = new JLabel("Utilisateur : " + username);
+
+        JButton logoutBtn = new JButton("Fermer la session");
+        logoutBtn.addActionListener(e -> onLogout());
+
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
+        right.add(logoutBtn);
+
+        JPanel bar = new JPanel(new BorderLayout());
+        bar.add(who, BorderLayout.WEST);
+        bar.add(right, BorderLayout.EAST);
+        return bar;
+    }
+
+    /** Ferme la session : coupe le Bluetooth puis retourne à l'écran de connexion. */
+    private void onLogout() {
+        if (ble.isConnected()) {
+            int answer = JOptionPane.showConfirmDialog(this,
+                    "La connexion Bluetooth sera coupée. Continuer ?",
+                    "Fermer la session", JOptionPane.YES_NO_OPTION);
+            if (answer != JOptionPane.YES_OPTION) return;
+        }
+
+        wasConnected = false;
+        watchdog.shutdownNow();
+        setVisible(false);
+
+        // Déconnexion dans un thread à part, 1,5 s maximum
+        Thread closer = new Thread(() -> {
+            try { ble.disconnect(); } catch (Exception ignored) {}
+        }, "ble-close");
+        closer.setDaemon(true);
+        closer.start();
+        try { closer.join(1500); } catch (InterruptedException ignored) {}
+
+        dispose();
+        new LoginFrame(auth, ble).setVisible(true);
     }
 
     private void onSend() {

@@ -74,7 +74,7 @@ public class LoginFrame extends JFrame {
         Arrays.fill(pass, '\0');
 
         if (ok) {
-            new MainFrame(user, ble).setVisible(true);
+            new MainFrame(user, auth, ble).setVisible(true);
             dispose();
         } else {
             errorLabel.setText("Identifiants incorrects.");
