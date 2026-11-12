@@ -2,6 +2,7 @@ package com.example.esp32.ui;
 
 import com.example.esp32.auth.AuthService;
 import com.example.esp32.ble.BluetoothService;
+import com.example.esp32.utils.AppExit;
 
 import javax.swing.*;
 import java.awt.*;
@@ -24,7 +25,14 @@ public class LoginFrame extends JFrame {
     }
 
     private void buildUI() {
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override public void windowClosing(java.awt.event.WindowEvent e) {
+                dispose();
+                //Runtime.getRuntime().halt(0); // arrêt immédiat du processus
+                AppExit.now();
+            }
+        });
 
         JPanel form = new JPanel(new GridBagLayout());
         form.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));

@@ -47,8 +47,20 @@ public class SimpleBleService implements BluetoothService {
         disconnect();
         Peripheral p = found.get(device.address());
         if (p == null) throw new IllegalStateException("Périphérique inconnu, refais un scan.");
-        p.connect();
-        current = p;
+
+        Exception last = null;
+        for (int attempt = 1; attempt <= 3; attempt++) {
+            try {
+                p.connect();
+                current = p;
+                return;
+            } catch (Exception e) {
+                last = e;
+                try { p.disconnect(); } catch (Exception ignored) {}
+                Thread.sleep(1000);
+            }
+        }
+        throw last;
     }
 
     @Override

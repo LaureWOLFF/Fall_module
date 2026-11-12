@@ -5,8 +5,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="009fdf8b-d26f-450d-97b7-91f133090639" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/utils/AppExit.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/esp32/ble/SimpleBleService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/ble/SimpleBleService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/esp32/ui/LoginFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/ui/LoginFrame.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/esp32/ui/MainFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/ui/MainFrame.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ble/SimpleBleService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ble/SimpleBleService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/LoginFrame.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/LoginFrame.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$2.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame.class" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -23,6 +31,18 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
   </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;LaureWOLFF&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/LaureWOLFF/Fall_module&quot;,
+    &quot;accountId&quot;: &quot;3f9bd1bb-ed70-43b7-ae34-cce7211c027d&quot;
+  }
+}</component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 0
 }</component>
@@ -34,6 +54,7 @@
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
     &quot;Application.Main.executor&quot;: &quot;Run&quot;,
+    &quot;Application.com.example.esp32.Main.executor&quot;: &quot;Run&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
@@ -78,17 +99,6 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration default="true" type="JetRunConfigurationType">
-      <module name="Fall-application" />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
-      <module name="Fall-application" />
-      <option name="filePath" />
-      <method v="2" />
-    </configuration>
     <recent_temporary>
       <list>
         <item itemvalue="Application.com.example.esp32.Main" />
@@ -120,7 +130,15 @@
       <workItem from="1793949719656" duration="239000" />
       <workItem from="1793949973727" duration="89000" />
       <workItem from="1793950098357" duration="17000" />
-      <workItem from="1793950227457" duration="840000" />
+      <workItem from="1793950227457" duration="2349000" />
+      <workItem from="1793953735624" duration="1418000" />
+      <workItem from="1793955280227" duration="287000" />
+      <workItem from="1793955608473" duration="2230000" />
+      <workItem from="1793958612612" duration="895000" />
+      <workItem from="1793960063344" duration="393000" />
+      <workItem from="1794400764121" duration="423000" />
+      <workItem from="1794401243284" duration="623000" />
+      <workItem from="1794466536723" duration="2080000" />
     </task>
     <servers />
   </component>

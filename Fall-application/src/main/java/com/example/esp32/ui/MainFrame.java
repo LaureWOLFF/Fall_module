@@ -4,6 +4,7 @@ import com.example.esp32.Config;
 import com.example.esp32.ble.BleDevice;
 import com.example.esp32.ble.BluetoothService;
 import com.example.esp32.model.PayloadBuilder;
+import com.example.esp32.utils.AppExit;
 
 import javax.swing.*;
 import java.awt.*;
@@ -12,6 +13,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class MainFrame extends JFrame {
 
@@ -30,12 +34,19 @@ public class MainFrame extends JFrame {
     private final JTextArea messageArea = new JTextArea(3, 15);
     private final JTextArea logArea = new JTextArea(8, 40);
     private final JLabel statusLabel = new JLabel("Non connecté");
+    private final ScheduledExecutorService watchdog = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread t = new Thread(r, "ble-watchdog");
+        t.setDaemon(true);
+        return t;
+    });
+    private volatile boolean wasConnected = false;
 
     public MainFrame(String username, BluetoothService ble) {
         super("ESP32-C6 Controller - " + username);
         this.ble = ble;
         buildUI();
         updateButtons();
+        watchdog.scheduleWithFixedDelay(this::checkConnection, 1500, 1500, TimeUnit.MILLISECONDS);
     }
 
     // ---------- Construction de l'interface ----------
@@ -126,12 +137,15 @@ public class MainFrame extends JFrame {
         log("Connexion à " + d + "...");
         setBusy(true);
         runAsync(() -> { ble.connect(d); return d; }, dev -> {
-            statusLabel.setText("Connecté à " + dev.name());
+            wasConnected = true;
+            String label = (dev.name() == null || dev.name().isBlank()) ? dev.address() : dev.name();
+            statusLabel.setText("Connecté à " + label);
             log("Connecté.");
         });
     }
 
     private void onDisconnect() {
+        wasConnected = false;
         ble.disconnect();
         statusLabel.setText("Non connecté");
         log("Déconnecté.");
@@ -152,14 +166,23 @@ public class MainFrame extends JFrame {
     }
 
     private void shutdown() {
-        ble.disconnect();
+        watchdog.shutdownNow();
+        setVisible(false);
+
+        Thread closer = new Thread(() -> {
+            try { ble.disconnect(); } catch (Exception ignored) {}
+        }, "ble-close");
+        closer.setDaemon(true);
+        closer.start();
+        try { closer.join(1500); } catch (InterruptedException ignored) {}
+
         dispose();
-        System.exit(0);
+        AppExit.now();
     }
 
     // ---------- Utilitaires ----------
 
-    /** Exécute une tâche bloquante hors du thread UI, puis rappelle onOk sur le thread UI. */
+    /* Exécute une tâche bloquante hors du thread UI, puis rappelle onOk sur le thread UI. */
     private <T> void runAsync(Callable<T> task, Consumer<T> onOk) {
         new SwingWorker<T, Void>() {
             @Override protected T doInBackground() throws Exception { return task.call(); }
@@ -190,10 +213,32 @@ public class MainFrame extends JFrame {
 
     private void updateButtons() {
         boolean connected = ble.isConnected();
+        if (!connected && !statusLabel.getText().equals("Non connecté")) {
+            statusLabel.setText("Non connecté");
+            wasConnected = false;
+        }
         scanBtn.setEnabled(true);
         connectBtn.setEnabled(!connected && deviceList.getSelectedValue() != null);
         disconnectBtn.setEnabled(connected);
         sendBtn.setEnabled(connected);
+    }
+
+    /* Tourne en arrière-plan : détecte une connexion rompue par l'appareil. */
+    private volatile int missed = 0;
+
+    private void checkConnection() {
+        if (!wasConnected || ble.isConnected()) {
+            missed = 0;
+            return;
+        }
+        if (++missed >= 2) {
+            missed = 0;
+            wasConnected = false;
+            SwingUtilities.invokeLater(() -> {
+                log("Connexion perdue : l'appareil s'est déconnecté.");
+                updateButtons();
+            });
+        }
     }
 
     private void log(String msg) {
@@ -201,4 +246,6 @@ public class MainFrame extends JFrame {
         logArea.append("[" + t + "] " + msg + "\n");
         logArea.setCaretPosition(logArea.getDocument().getLength());
     }
+
+
 }
