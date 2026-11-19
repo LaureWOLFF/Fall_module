@@ -7,6 +7,7 @@
     <list default="true" id="009fdf8b-d26f-450d-97b7-91f133090639" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/example/esp32/ui/MainFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/ui/MainFrame.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$1.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$2.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../Projet_Chute/Projet_Chute.ino" beforeDir="false" afterPath="$PROJECT_DIR$/../Projet_Chute/Projet_Chute.ino" afterDir="false" />
@@ -28,6 +29,7 @@
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
+    <option name="UPDATE_TYPE" value="REBASE" />
   </component>
   <component name="GitHubPullRequestSearchHistory">{
   &quot;lastFilter&quot;: {
@@ -138,7 +140,8 @@
       <workItem from="1794401243284" duration="623000" />
       <workItem from="1794466536723" duration="2080000" />
       <workItem from="1794468858848" duration="1768000" />
-      <workItem from="1795083301811" duration="2106000" />
+      <workItem from="1795083301811" duration="2613000" />
+      <workItem from="1795100296553" duration="1728000" />
     </task>
     <servers />
   </component>
