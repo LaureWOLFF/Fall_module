@@ -39,9 +39,9 @@ public class MainFrame extends JFrame {
     private final JTextArea logArea = new JTextArea(8, 40);
     private final JLabel statusLabel = new JLabel("Non connecté");
 
-    private JLabel recvEvtLabel = new JLabel("-");
-    private JLabel recvIdLabel  = new JLabel("-");
-    private JLabel recvAgoLabel = new JLabel("-");
+    private final JLabel recvEvtLabel = new JLabel("-");
+    private final JLabel recvIdLabel  = new JLabel("-");
+    private final JLabel recvAgoLabel = new JLabel("-");
 
     private final ScheduledExecutorService watchdog = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r, "ble-watchdog");
