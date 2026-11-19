@@ -34,7 +34,7 @@ public class MainFrame extends JFrame {
     private final JButton sendBtn = new JButton("Envoyer");
 
     private final JTextField nameField = new JTextField(15);
-    private final JTextField valueField = new JTextField(15);
+    private final JTextField ageField = new JTextField(15);
     private final JTextArea messageArea = new JTextArea(3, 15);
     private final JTextArea logArea = new JTextArea(8, 40);
     private final JLabel statusLabel = new JLabel("Non connecté");
@@ -105,11 +105,12 @@ public class MainFrame extends JFrame {
         c.fill = GridBagConstraints.HORIZONTAL;
         c.weightx = 1;
 
-        c.gridx = 0; c.gridy = 0; c.weightx = 0; p.add(new JLabel("Nom :"), c);
+        c.gridx = 0; c.gridy = 0; c.weightx = 0; p.add(new JLabel("Nom/Name :"), c);
         c.gridx = 1; c.weightx = 1;              p.add(nameField, c);
-        c.gridx = 0; c.gridy = 1; c.weightx = 0; p.add(new JLabel("Valeur :"), c);
-        c.gridx = 1; c.weightx = 1;              p.add(valueField, c);
-        c.gridx = 0; c.gridy = 2; c.weightx = 0; p.add(new JLabel("Message :"), c);
+        c.gridx = 0; c.gridy = 1; c.weightx = 0; p.add(new JLabel("Age :"), c);
+        c.gridx = 1; c.weightx = 1;              p.add(ageField, c);
+        //c.gridx = 0; c.gridy = 2; c.weightx = 0; p.add(new JLabel("Antécedent(s) médical(s) \n (evanouisements, anciennes chutes, autres ...)"), c);
+        c.gridx = 0; c.gridy = 2; c.weightx = 0; p.add(new JLabel("<html>Antécédents médicaux<br><span color:gray;'>(évanouissements, anciennes chutes, autres...)</span></html>"), c);
         c.gridx = 1; c.weightx = 1;              p.add(new JScrollPane(messageArea), c);
 
         c.gridx = 0; c.gridy = 3; c.gridwidth = 2;
@@ -201,12 +202,12 @@ public class MainFrame extends JFrame {
 
     private void onSend() {
         String name = nameField.getText();
-        String value = valueField.getText();
-        if (name.isBlank() && value.isBlank() && messageArea.getText().isBlank()) {
+        String age = ageField.getText();
+        if (name.isBlank() && age.isBlank() && messageArea.getText().isBlank()) {
             log("Rien à envoyer.");
             return;
         }
-        String payload = PayloadBuilder.build(name, value, messageArea.getText());
+        String payload = PayloadBuilder.build(name, age, messageArea.getText());
         log("Envoi : " + payload.trim());
         setBusy(true);
         runAsync(() -> { ble.send(payload); return payload; }, p -> log("Envoyé."));
