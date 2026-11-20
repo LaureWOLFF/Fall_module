@@ -5,18 +5,17 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="009fdf8b-d26f-450d-97b7-91f133090639" name="Changes" comment="&quot;interface ver2 + fct pour affiché les info recues&quot;">
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/utils/LineAssembler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/ui/FallHistoryFrame.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/esp32/Config.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/Config.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/esp32/ble/SimpleBleService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/ble/SimpleBleService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/esp32/model/PayloadBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/model/PayloadBuilder.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/example/esp32/ui/MainFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/ui/MainFrame.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/Config.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/Config.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ble/SimpleBleService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ble/SimpleBleService.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$1.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$2.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../IA_Training" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Projet_Chute/Projet_Chute.ino" beforeDir="false" afterPath="$PROJECT_DIR$/../Projet_Chute/Projet_Chute.ino" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Projet_Chute/ble_module.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/../Projet_Chute/ble_module.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Projet_Chute/fall_module.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/../Projet_Chute/fall_module.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Projet_Chute/fall_module.h" beforeDir="false" afterPath="$PROJECT_DIR$/../Projet_Chute/fall_module.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -130,7 +129,7 @@
       <workItem from="1795100296553" duration="1728000" />
       <workItem from="1795163100249" duration="651000" />
       <workItem from="1795163901617" duration="1828000" />
-      <workItem from="1795165914689" duration="2777000" />
+      <workItem from="1795165914689" duration="5991000" />
     </task>
     <servers />
   </component>

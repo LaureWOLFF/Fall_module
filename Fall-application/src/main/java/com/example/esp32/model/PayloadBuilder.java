@@ -4,10 +4,10 @@ public final class PayloadBuilder {
     private PayloadBuilder() {}
 
 
-    /** Format : NAME=...;VALUE=...;MSG=...\n */
+    /** Format : NAME=...;AGE=...;MSG=...\n */
     public static String build(String name, String value, String message) {
         return "NAME=" + clean(name)
-                + ";VALUE=" + clean(value)
+                + ";AGE=" + clean(value)
                 + ";MSG=" + clean(message)
                 + "\n";
     }
@@ -16,7 +16,7 @@ public final class PayloadBuilder {
         return s == null ? "" : s.replace(";", ",").replace("\n", " ").trim();
     }
 
-    /** Décode "NAME=...;VALUE=...;MSG=...\n" reçu de l'ESP32. */
+    /** Décode "NAME=...;AGE=...;MSG=...\n" reçu de l'ESP32. */
     public static String[] parse(String payload) {
         String name = "", value = "", msg = "";
         for (String part : payload.split(";")) {

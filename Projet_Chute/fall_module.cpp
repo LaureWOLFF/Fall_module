@@ -146,6 +146,9 @@ bool fall_update(FallResult &r) {
   r.acc[0] = lastSample[0];
   r.acc[1] = lastSample[1];
   r.acc[2] = lastSample[2];
+  r.gyr[0] = lastSample[3] * GYRO_DIV;
+  r.gyr[1] = lastSample[4] * GYRO_DIV;
+  r.gyr[2] = lastSample[5] * GYRO_DIV;
   r.fall = r.p > FALL_THRESHOLD;
   return true;
 }

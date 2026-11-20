@@ -85,7 +85,7 @@ void ble_init() {
 
   // ESP32 -> PC : notification
   txChar = service->createCharacteristic(TX_CHAR_UUID, BLECharacteristic::PROPERTY_NOTIFY);
-  txChar->addDescriptor(new BLE2902());   // si l'IDE refuse cette ligne, supprime-la
+  txChar->addDescriptor(new BLE2902());
 
   service->start();
 

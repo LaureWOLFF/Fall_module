@@ -4,6 +4,7 @@
 struct FallResult {
   float    p;        // probabilité de chute (0..1)
   float    acc[3];   // dernière accélération ax, ay, az [g]
+  float    gyr[3];   // last angular velocity gx, gy, gz [deg/s]
   uint32_t us;       // durée de l'inférence en microsecondes
   bool     fall;     // true si p > FALL_THRESHOLD
 };

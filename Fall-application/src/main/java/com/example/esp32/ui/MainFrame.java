@@ -8,6 +8,7 @@ import com.example.esp32.utils.AppExit;
 import com.example.esp32.auth.AuthService;
 import com.example.esp32.utils.LineAssembler;
 
+
 import javax.swing.*;
 import java.awt.*;
 import java.time.LocalTime;
@@ -41,6 +42,10 @@ public class MainFrame extends JFrame {
     private final JButton connectBtn = new JButton("Connecter");
     private final JButton disconnectBtn = new JButton("Déconnecter");
     private final JButton sendBtn = new JButton("Envoyer");
+    private final JButton historyButton = new JButton("Historique des chutes");
+
+    private final DefaultListModel<String> fallHistoryModel = new DefaultListModel<>();
+    private FallHistoryFrame historyFrame; // fenêtre dédiée à l'historique
 
     private final JTextField nameField = new JTextField(15);
     private final JTextField ageField = new JTextField(15);
@@ -102,6 +107,7 @@ public class MainFrame extends JFrame {
         disconnectBtn.addActionListener(e -> onDisconnect());
         sendBtn.addActionListener(e -> onSend());
         deviceList.addListSelectionListener(e -> updateButtons());
+        historyButton.addActionListener(e -> openHistoryWindow());
 
         pack();
         setLocationRelativeTo(null);
@@ -148,7 +154,7 @@ public class MainFrame extends JFrame {
 
     private JPanel receivedFormPanel() {
         JPanel p = new JPanel(new GridBagLayout());
-        p.setBorder(BorderFactory.createTitledBorder("Données reçues"));
+        p.setBorder(BorderFactory.createTitledBorder("Dernières données reçues"));
         GridBagConstraints c = new GridBagConstraints();
         c.insets = new Insets(5, 5, 5, 5);
         c.fill = GridBagConstraints.HORIZONTAL;
@@ -171,6 +177,11 @@ public class MainFrame extends JFrame {
         p.add(new JLabel("Il y a (AGO) :"), c);
         c.gridx = 1; c.weightx = 1;
         p.add(recvAgoLabel, c);
+
+        JPanel historyActionPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        historyActionPanel.add(historyButton);
+        c.gridx = 0; c.gridy = 4; c.gridwidth = 2; c.weightx = 1;
+        p.add(historyActionPanel, c);
 
         return p;
     }
@@ -270,24 +281,19 @@ public class MainFrame extends JFrame {
     }
 
     public void OnReceived(String rawFrame) {
-        if (rawFrame == null || rawFrame.isBlank()) {
-            return;
-        }
+        if (rawFrame == null || rawFrame.isBlank()) return;
 
         String cleanFrame = rawFrame.trim();
-        String evt = "-";
-        String id  = "-";
-        String ago = "-";
+        String evt = "-", id = "-", p = "-", ago = "-";
 
-        for (String token : cleanFrame.split(";")) {
-            String[] kv = token.split("=", 2);
+        for (String part : cleanFrame.split(";")) {
+            String[] kv = part.split("=", 2);
             if (kv.length == 2) {
-                String key = kv[0].trim();
-                String val = kv[1].trim();
-                switch (key) {
-                    case "EVT" -> evt = val;
-                    case "ID"  -> id  = val;
-                    case "AGO" -> ago = val;
+                switch (kv[0].trim()) {
+                    case "EVT" -> evt = kv[1].trim();
+                    case "ID"  -> id  = kv[1].trim();
+                    case "P"   -> p   = kv[1].trim();
+                    case "AGO" -> ago = kv[1].trim();
                     default    -> {}
                 }
             }
@@ -295,24 +301,23 @@ public class MainFrame extends JFrame {
 
         final String fEvt = evt;
         final String fId  = id;
+        final String fP   = p;
         final String fAgo = ago;
+        final String timeStr = java.time.LocalTime.now()
+                .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss"));
 
         SwingUtilities.invokeLater(() -> {
             recvEvtLabel.setText(fEvt);
             recvIdLabel.setText(fId);
             recvAgoLabel.setText(fAgo);
+            recvEvtLabel.setForeground("FALL".equalsIgnoreCase(fEvt) ? Color.RED : new Color(0, 128, 0));
 
-            if ("FALL".equalsIgnoreCase(fEvt)) {
-                recvEvtLabel.setForeground(Color.RED);
-            } else {
-                recvEvtLabel.setForeground(new Color(0, 128, 0));
-            }
+            String entry = String.format("[%s] EVT=%s | ID=%s | P=%s | AGO=%s s",
+                    timeStr, fEvt, fId, fP, fAgo);
+            fallHistoryModel.add(0, entry);
+
+            log("Reçu : " + cleanFrame);
         });
-
-        // Confirme à l'ESP32 qu'on a bien reçu la chute (sinon il la renverra à la prochaine synchro)
-        if ("FALL".equalsIgnoreCase(fEvt) && fId.matches("\\d+")) {
-            sendAsync("ACK=" + fId + "\n");
-        }
     }
 
     private void shutdown() {
@@ -408,5 +413,13 @@ public class MainFrame extends JFrame {
         });
     }
 
+    private void openHistoryWindow() {
+        if (historyFrame == null || !historyFrame.isDisplayable()) {
+            historyFrame = new FallHistoryFrame(this, fallHistoryModel);
+        }
+        historyFrame.setLocationRelativeTo(this);
+        historyFrame.setVisible(true);
+        historyFrame.toFront();
+    }
 
 }

@@ -35,9 +35,9 @@ void loop() {
     return;
   }
 
-  Serial.printf("p=%.3f  acc=[%+.2f %+.2f %+.2f] g  inference=%lu us%s\n",
-                r.p, r.acc[0], r.acc[1], r.acc[2], (unsigned long)r.us,
-                r.fall ? "  <-- FALL DETECTED" : "");
+  Serial.printf("p=%.3f  acc=[%+.2f %+.2f %+.2f] g  gyr=[%+7.1f %+7.1f %+7.1f] deg/s  inference=%lu us%s\n",
+                r.p, r.acc[0], r.acc[1], r.acc[2], r.gyr[0], r.gyr[1], r.gyr[2],
+                (unsigned long)r.us, r.fall ? "  <-- FALL DETECTED" : "");
 
   // Enregistre la chute (au plus une toutes les FALL_COOLDOWN_MS), connecté ou non
   if (r.fall && (!hasFall || millis() - lastFallMs >= FALL_COOLDOWN_MS)) {
