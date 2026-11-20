@@ -1,0 +1,24 @@
+<changelist name="Uncommitted_changes_before_Update_at_19_11_2026_11_50_[Changes]" date="1795085466230" recycled="true" deleted="true">
+  <option name="PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_19_11_2026_11_50_[Changes]/shelved.patch" />
+  <option name="DESCRIPTION" value="Uncommitted changes before Update at 19/11/2026 11:50 [Changes]" />
+  <binary>
+    <option name="BEFORE_PATH" value="target/classes/com/example/esp32/ble/BluetoothService.class" />
+    <option name="AFTER_PATH" value="target/classes/com/example/esp32/ble/BluetoothService.class" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_19_11_2026_11_50_[Changes]/BluetoothService.class" />
+  </binary>
+  <binary>
+    <option name="BEFORE_PATH" value="target/classes/com/example/esp32/ble/MockBluetoothService.class" />
+    <option name="AFTER_PATH" value="target/classes/com/example/esp32/ble/MockBluetoothService.class" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_19_11_2026_11_50_[Changes]/MockBluetoothService.class" />
+  </binary>
+  <binary>
+    <option name="BEFORE_PATH" value="target/classes/com/example/esp32/ble/SimpleBleService.class" />
+    <option name="AFTER_PATH" value="target/classes/com/example/esp32/ble/SimpleBleService.class" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_19_11_2026_11_50_[Changes]/SimpleBleService.class" />
+  </binary>
+  <binary>
+    <option name="BEFORE_PATH" value="target/classes/com/example/esp32/model/PayloadBuilder.class" />
+    <option name="AFTER_PATH" value="target/classes/com/example/esp32/model/PayloadBuilder.class" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_19_11_2026_11_50_[Changes]/PayloadBuilder.class" />
+  </binary>
+</changelist>

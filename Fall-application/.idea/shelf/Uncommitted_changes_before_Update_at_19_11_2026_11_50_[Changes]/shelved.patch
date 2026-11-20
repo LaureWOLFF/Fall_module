@@ -1,0 +1,296 @@
+Index: src/main/java/com/example/esp32/ble/BluetoothService.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.esp32.ble;\r\n\r\nimport java.util.List;\r\n\r\npublic interface BluetoothService {\r\n    List<BleDevice> scan(int durationMs) throws Exception;\r\n    void connect(BleDevice device) throws Exception;\r\n    void send(String data) throws Exception;\r\n    void disconnect();\r\n    boolean isConnected();\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/main/java/com/example/esp32/ble/BluetoothService.java b/src/main/java/com/example/esp32/ble/BluetoothService.java
+--- a/src/main/java/com/example/esp32/ble/BluetoothService.java	(revision 2429be96ec8222bd8588611c07ef6046a0a76708)
++++ b/src/main/java/com/example/esp32/ble/BluetoothService.java	(date 1794469285604)
+@@ -6,6 +6,7 @@
+     List<BleDevice> scan(int durationMs) throws Exception;
+     void connect(BleDevice device) throws Exception;
+     void send(String data) throws Exception;
++    void listen (BleDataListener listener) throws Exception;
+     void disconnect();
+     boolean isConnected();
+ }
+Index: src/main/java/com/example/esp32/ble/SimpleBleService.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.esp32.ble;\r\n\r\nimport com.example.esp32.Config;\r\nimport org.simplejavable.Adapter;\r\nimport org.simplejavable.BluetoothUUID;\r\nimport org.simplejavable.Peripheral;\r\n\r\nimport java.nio.charset.StandardCharsets;\r\nimport java.util.*;\r\n\r\npublic class SimpleBleService implements BluetoothService {\r\n\r\n    private static final BluetoothUUID SERVICE = new BluetoothUUID(Config.SERVICE_UUID);\r\n    private static final BluetoothUUID CHARACTERISTIC = new BluetoothUUID(Config.CHAR_UUID);\r\n\r\n    private Adapter adapter;\r\n    private final Map<String, Peripheral> found = new HashMap<>();\r\n    private Peripheral current;\r\n\r\n    @Override\r\n    public List<BleDevice> scan(int durationMs) throws Exception {\r\n        if (adapter == null) {\r\n            List<Adapter> adapters = Adapter.getAdapters();\r\n            if (adapters.isEmpty()) {\r\n                throw new IllegalStateException(\"Aucun adaptateur Bluetooth détecté.\");\r\n            }\r\n            adapter = adapters.get(0);\r\n        }\r\n\r\n        found.clear();\r\n        adapter.scanFor(durationMs);\r\n\r\n        List<BleDevice> result = new ArrayList<>();\r\n        for (Peripheral p : adapter.scanGetResults()) {\r\n            String address = String.valueOf(p.getAddress());\r\n            found.put(address, p);\r\n            result.add(new BleDevice(p.getIdentifier(), address, (int) p.getRssi()));\r\n        }\r\n\r\n        // Signal le plus fort en premier (appareil le plus proche)\r\n        result.sort(Comparator.comparingInt(BleDevice::rssi).reversed());\r\n        return result;\r\n    }\r\n\r\n    @Override\r\n    public void connect(BleDevice device) throws Exception {\r\n        disconnect();\r\n        Peripheral p = found.get(device.address());\r\n        if (p == null) throw new IllegalStateException(\"Périphérique inconnu, refais un scan.\");\r\n\r\n        Exception last = null;\r\n        for (int attempt = 1; attempt <= 3; attempt++) {\r\n            try {\r\n                p.connect();\r\n                current = p;\r\n                return;\r\n            } catch (Exception e) {\r\n                last = e;\r\n                try { p.disconnect(); } catch (Exception ignored) {}\r\n                Thread.sleep(1000);\r\n            }\r\n        }\r\n        throw last;\r\n    }\r\n\r\n    @Override\r\n    public void send(String data) throws Exception {\r\n        if (!isConnected()) throw new IllegalStateException(\"Non connecté.\");\r\n\r\n        byte[] bytes = data.getBytes(StandardCharsets.UTF_8);\r\n        int size = Config.BLE_CHUNK_SIZE;\r\n        boolean useCommand = false;\r\n        Exception requestError = null;\r\n\r\n        for (int i = 0; i < bytes.length; i += size) {\r\n            byte[] chunk = Arrays.copyOfRange(bytes, i, Math.min(i + size, bytes.length));\r\n\r\n            if (!useCommand) {\r\n                try {\r\n                    // Écriture avec confirmation (préférée)\r\n                    current.writeRequest(SERVICE, CHARACTERISTIC, chunk);\r\n                    continue;\r\n                } catch (Exception e) {\r\n                    requestError = e;\r\n                    useCommand = true; // bascule en écriture sans confirmation\r\n                }\r\n            }\r\n\r\n            try {\r\n                current.writeCommand(SERVICE, CHARACTERISTIC, chunk);\r\n                Thread.sleep(20);\r\n            } catch (Exception e) {\r\n                String first = requestError == null ? \"-\" : requestError.getMessage();\r\n                throw new Exception(\"writeRequest : \" + first + \"  |  writeCommand : \" + e.getMessage(), e);\r\n            }\r\n        }\r\n    }\r\n\r\n    @Override\r\n    public void disconnect() {\r\n        if (current != null) {\r\n            try { current.disconnect(); } catch (Exception ignored) {}\r\n            current = null;\r\n        }\r\n    }\r\n\r\n    @Override\r\n    public boolean isConnected() {\r\n        try { return current != null && current.isConnected(); }\r\n        catch (Exception e) { return false; }\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/main/java/com/example/esp32/ble/SimpleBleService.java b/src/main/java/com/example/esp32/ble/SimpleBleService.java
+--- a/src/main/java/com/example/esp32/ble/SimpleBleService.java	(revision 2429be96ec8222bd8588611c07ef6046a0a76708)
++++ b/src/main/java/com/example/esp32/ble/SimpleBleService.java	(date 1794470162805)
+@@ -1,5 +1,6 @@
+ package com.example.esp32.ble;
+-
++import com.example.esp32.model.PayloadBuilder;
++import java.util.concurrent.CopyOnWriteArrayList;
+ import com.example.esp32.Config;
+ import org.simplejavable.Adapter;
+ import org.simplejavable.BluetoothUUID;
+@@ -17,6 +18,13 @@
+     private final Map<String, Peripheral> found = new HashMap<>();
+     private Peripheral current;
+ 
++    // Service UART-like standard : à aligner avec le firmware ESP32
++    private static final UUID SERVICE_UUID = UUID.fromString("6e400001-b5a3-f393-e0a9-e50e24dcca9e");
++    private static final UUID TX_CHARACTERISTIC_UUID =  UUID.fromString("6e400002-b5a3-f393-e0a9-e50e24dcca9e");// ESP32 → central
++    private static final UUID CCCD_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
++
++    private final CopyOnWriteArrayList<BleDataListener> listeners = new CopyOnWriteArrayList<>();
++
+     @Override
+     public List<BleDevice> scan(int durationMs) throws Exception {
+         if (adapter == null) {
+@@ -96,6 +104,8 @@
+         }
+     }
+ 
++
++
+     @Override
+     public void disconnect() {
+         if (current != null) {
+@@ -109,4 +119,32 @@
+         try { return current != null && current.isConnected(); }
+         catch (Exception e) { return false; }
+     }
++
++    @Override
++    public void listen(BleDataListener listener) {
++        if (listener != null) listeners.addIfAbsent(listener);
++        connectAndSubscribe();
++    }
++
++    private void connectAndSubscribe() {
++        // 1. Scanner jusqu'à trouver l'ESP32 (nom ou SERVICE_UUID annoncé)
++        // 2. Se connecter (GATT connect)
++        // 3. Après onServicesDiscovered :
++        //    BluetoothGattCharacteristic tx =
++        //        gatt.getService(SERVICE_UUID).getCharacteristic(TX_CHARACTERISTIC_UUID);
++        //    gatt.setCharacteristicNotification(tx, true);   // active la réception locale
++        //
++        //    BluetoothGattDescriptor cccd = tx.getDescriptor(CCCD_UUID);
++        //    cccd.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
++        //    gatt.writeDescriptor(cccd);                     // dit à l'ESP32 "envoie-moi tout"
++    }
++
++    /** Callback invoqué à chaque notification de l'ESP32. */
++    private void onCharacteristicChanged(BleDevice source, byte[] data) {
++        String payload = new String(data, java.nio.charset.StandardCharsets.UTF_8);
++        String[] decoded = PayloadBuilder.parse(payload);
++        for (BleDataListener l : listeners) {
++            l.onDataReceived(source, data);
++        }
++    }
+ }
+Index: src/main/java/com/example/esp32/ble/MockBluetoothService.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.esp32.ble;\r\n\r\nimport java.util.List;\r\n\r\npublic class MockBluetoothService implements BluetoothService {\r\n    private boolean connected;\r\n\r\n    @Override\r\n    public List<BleDevice> scan(int durationMs) throws Exception {\r\n        Thread.sleep(Math.min(durationMs, 1500));\r\n        return List.of(\r\n                new BleDevice(\"ESP32C6-Demo\", \"AA:BB:CC:DD:EE:01\", -45),\r\n                new BleDevice(\"Autre-Appareil\", \"AA:BB:CC:DD:EE:02\", -80));\r\n    }\r\n\r\n    @Override\r\n    public void connect(BleDevice device) throws Exception {\r\n        Thread.sleep(500);\r\n        connected = true;\r\n    }\r\n\r\n    @Override\r\n    public void send(String data) throws Exception {\r\n        if (!connected) throw new IllegalStateException(\"Non connecté.\");\r\n        Thread.sleep(200);\r\n        System.out.println(\"[MOCK] Envoi : \" + data.trim());\r\n    }\r\n\r\n    @Override\r\n    public void disconnect() { connected = false; }\r\n\r\n    @Override\r\n    public boolean isConnected() { return connected; }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/main/java/com/example/esp32/ble/MockBluetoothService.java b/src/main/java/com/example/esp32/ble/MockBluetoothService.java
+--- a/src/main/java/com/example/esp32/ble/MockBluetoothService.java	(revision 2429be96ec8222bd8588611c07ef6046a0a76708)
++++ b/src/main/java/com/example/esp32/ble/MockBluetoothService.java	(date 1794472800403)
+@@ -1,9 +1,16 @@
+ package com.example.esp32.ble;
+ 
++import com.example.esp32.model.PayloadBuilder;
+ import java.util.List;
+ 
+ public class MockBluetoothService implements BluetoothService {
+     private boolean connected;
++    private BleDataListener listener;
++
++    private final BleDevice mockDevice =
++            new BleDevice("ESP32C6-Demo", "AA:BB:CC:DD:EE:01", -45);
++
++
+ 
+     @Override
+     public List<BleDevice> scan(int durationMs) throws Exception {
+@@ -31,4 +38,16 @@
+ 
+     @Override
+     public boolean isConnected() { return connected; }
++
++    // ble/MockBluetoothService. addition
++    @Override
++    public void listen(BleDataListener listener) { this.listener = listener; }
++
++
++    /** Simule une notification envoyée par l'ESP32. */
++    public void simulateNotification(byte[] data) {
++        if (listener != null) {
++            listener.onDataReceived(mockDevice, data.clone());
++        }
++    }
+ }
+Index: src/main/java/com/example/esp32/model/PayloadBuilder.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.esp32.model;\r\n\r\npublic final class PayloadBuilder {\r\n    private PayloadBuilder() {}\r\n\r\n    /** Format : NAME=...;VALUE=...;MSG=...\\n */\r\n    public static String build(String name, String value, String message) {\r\n        return \"NAME=\" + clean(name)\r\n                + \";VALUE=\" + clean(value)\r\n                + \";MSG=\" + clean(message)\r\n                + \"\\n\";\r\n    }\r\n\r\n    private static String clean(String s) {\r\n        return s == null ? \"\" : s.replace(\";\", \",\").replace(\"\\n\", \" \").trim();\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/main/java/com/example/esp32/model/PayloadBuilder.java b/src/main/java/com/example/esp32/model/PayloadBuilder.java
+--- a/src/main/java/com/example/esp32/model/PayloadBuilder.java	(revision 2429be96ec8222bd8588611c07ef6046a0a76708)
++++ b/src/main/java/com/example/esp32/model/PayloadBuilder.java	(date 1794470125162)
+@@ -3,6 +3,7 @@
+ public final class PayloadBuilder {
+     private PayloadBuilder() {}
+ 
++
+     /** Format : NAME=...;VALUE=...;MSG=...\n */
+     public static String build(String name, String value, String message) {
+         return "NAME=" + clean(name)
+@@ -14,4 +15,21 @@
+     private static String clean(String s) {
+         return s == null ? "" : s.replace(";", ",").replace("\n", " ").trim();
+     }
++
++    /** Décode "NAME=...;VALUE=...;MSG=...\n" reçu de l'ESP32. */
++    public static String[] parse(String payload) {
++        String name = "", value = "", msg = "";
++        for (String part : payload.split(";")) {
++            int eq = part.indexOf('=');
++            if (eq < 0) continue;
++            String key = part.substring(0, eq).trim();
++            String val = part.substring(eq + 1).trim();
++            switch (key) {
++                case "NAME"  -> name  = val;
++                case "VALUE" -> value = val;
++                case "MSG"   -> msg   = val;
++            }
++        }
++        return new String[]{ name, value, msg };
++    }
+ }
+Index: .idea/misc.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<project version=\"4\">\r\n  <component name=\"ExternalStorageConfigurationManager\" enabled=\"true\" />\r\n  <component name=\"MavenProjectsManager\">\r\n    <option name=\"originalFiles\">\r\n      <list>\r\n        <option value=\"$PROJECT_DIR$/pom.xml\" />\r\n      </list>\r\n    </option>\r\n  </component>\r\n  <component name=\"ProjectRootManager\" version=\"2\" languageLevel=\"JDK_23\" default=\"true\" project-jdk-name=\"23\" project-jdk-type=\"JavaSDK\" />\r\n</project>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/misc.xml b/.idea/misc.xml
+--- a/.idea/misc.xml	(revision 2429be96ec8222bd8588611c07ef6046a0a76708)
++++ b/.idea/misc.xml	(date 1794469285668)
+@@ -8,5 +8,5 @@
+       </list>
+     </option>
+   </component>
+-  <component name="ProjectRootManager" version="2" languageLevel="JDK_23" default="true" project-jdk-name="23" project-jdk-type="JavaSDK" />
++  <component name="ProjectRootManager" version="2" languageLevel="JDK_23" default="true" project-jdk-name="openjdk-23" project-jdk-type="JavaSDK" />
+ </project>
+\ No newline at end of file
+Index: .idea/workspace.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<project version=\"4\">\r\n  <component name=\"AutoImportSettings\">\r\n    <option name=\"autoReloadType\" value=\"SELECTIVE\" />\r\n  </component>\r\n  <component name=\"ChangeListManager\">\r\n    <list default=\"true\" id=\"009fdf8b-d26f-450d-97b7-91f133090639\" name=\"Changes\" comment=\"\">\r\n      <change afterPath=\"$PROJECT_DIR$/src/main/java/com/example/esp32/utils/AppExit.java\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/.idea/workspace.xml\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/.idea/workspace.xml\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/src/main/java/com/example/esp32/ble/SimpleBleService.java\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/src/main/java/com/example/esp32/ble/SimpleBleService.java\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/src/main/java/com/example/esp32/ui/LoginFrame.java\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/src/main/java/com/example/esp32/ui/LoginFrame.java\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/src/main/java/com/example/esp32/ui/MainFrame.java\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/src/main/java/com/example/esp32/ui/MainFrame.java\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/target/classes/com/example/esp32/ble/SimpleBleService.class\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/target/classes/com/example/esp32/ble/SimpleBleService.class\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/target/classes/com/example/esp32/ui/LoginFrame.class\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/target/classes/com/example/esp32/ui/LoginFrame.class\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$1.class\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$1.class\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$2.class\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$2.class\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame.class\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame.class\" afterDir=\"false\" />\r\n    </list>\r\n    <option name=\"SHOW_DIALOG\" value=\"false\" />\r\n    <option name=\"HIGHLIGHT_CONFLICTS\" value=\"true\" />\r\n    <option name=\"HIGHLIGHT_NON_ACTIVE_CHANGELIST\" value=\"false\" />\r\n    <option name=\"LAST_RESOLUTION\" value=\"IGNORE\" />\r\n  </component>\r\n  <component name=\"FileTemplateManagerImpl\">\r\n    <option name=\"RECENT_TEMPLATES\">\r\n      <list>\r\n        <option value=\"Class\" />\r\n      </list>\r\n    </option>\r\n  </component>\r\n  <component name=\"Git.Settings\">\r\n    <option name=\"RECENT_GIT_ROOT_PATH\" value=\"$PROJECT_DIR$/..\" />\r\n  </component>\r\n  <component name=\"GitHubPullRequestSearchHistory\">{\r\n  &quot;lastFilter&quot;: {\r\n    &quot;state&quot;: &quot;OPEN&quot;,\r\n    &quot;assignee&quot;: &quot;LaureWOLFF&quot;\r\n  }\r\n}</component>\r\n  <component name=\"GithubPullRequestsUISettings\">{\r\n  &quot;selectedUrlAndAccountId&quot;: {\r\n    &quot;url&quot;: &quot;https://github.com/LaureWOLFF/Fall_module&quot;,\r\n    &quot;accountId&quot;: &quot;3f9bd1bb-ed70-43b7-ae34-cce7211c027d&quot;\r\n  }\r\n}</component>\r\n  <component name=\"ProjectColorInfo\">{\r\n  &quot;associatedIndex&quot;: 0\r\n}</component>\r\n  <component name=\"ProjectId\" id=\"3Lg9UY0V2XFr93TUJFuP8DAWZOp\" />\r\n  <component name=\"ProjectViewState\">\r\n    <option name=\"hideEmptyMiddlePackages\" value=\"true\" />\r\n    <option name=\"showLibraryContents\" value=\"true\" />\r\n  </component>\r\n  <component name=\"PropertiesComponent\">{\r\n  &quot;keyToString&quot;: {\r\n    &quot;Application.Main.executor&quot;: &quot;Run&quot;,\r\n    &quot;Application.com.example.esp32.Main.executor&quot;: &quot;Run&quot;,\r\n    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,\r\n    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,\r\n    &quot;git-widget-placeholder&quot;: &quot;main&quot;,\r\n    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,\r\n    &quot;last_opened_file_path&quot;: &quot;C:/3A_EVE_Projet_Fall_module/Fall-application&quot;,\r\n    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,\r\n    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,\r\n    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,\r\n    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,\r\n    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,\r\n    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,\r\n    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,\r\n    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,\r\n    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;\r\n  }\r\n}</component>\r\n  <component name=\"RunManager\" selected=\"Application.com.example.esp32.Main\">\r\n    <configuration name=\"Main\" type=\"Application\" factoryName=\"Application\" nameIsGenerated=\"true\">\r\n      <option name=\"ALTERNATIVE_JRE_PATH\" value=\"23\" />\r\n      <option name=\"ALTERNATIVE_JRE_PATH_ENABLED\" value=\"true\" />\r\n      <module name=\"Fall-application\" />\r\n      <extension name=\"coverage\">\r\n        <pattern>\r\n          <option name=\"PATTERN\" value=\"com.example.esp32.*\" />\r\n          <option name=\"ENABLED\" value=\"true\" />\r\n        </pattern>\r\n      </extension>\r\n      <method v=\"2\">\r\n        <option name=\"Make\" enabled=\"true\" />\r\n      </method>\r\n    </configuration>\r\n    <configuration name=\"com.example.esp32.Main\" type=\"Application\" factoryName=\"Application\" temporary=\"true\" nameIsGenerated=\"true\">\r\n      <option name=\"MAIN_CLASS_NAME\" value=\"com.example.esp32.Main\" />\r\n      <module name=\"Fall-application\" />\r\n      <extension name=\"coverage\">\r\n        <pattern>\r\n          <option name=\"PATTERN\" value=\"com.example.esp32.*\" />\r\n          <option name=\"ENABLED\" value=\"true\" />\r\n        </pattern>\r\n      </extension>\r\n      <method v=\"2\">\r\n        <option name=\"Make\" enabled=\"true\" />\r\n      </method>\r\n    </configuration>\r\n    <recent_temporary>\r\n      <list>\r\n        <item itemvalue=\"Application.com.example.esp32.Main\" />\r\n      </list>\r\n    </recent_temporary>\r\n  </component>\r\n  <component name=\"SharedIndexes\">\r\n    <attachedChunks>\r\n      <set>\r\n        <option value=\"bundled-jdk-9823dce3aa75-a94e463ab2e7-intellij.indexing.shared.core-IU-243.26053.27\" />\r\n        <option value=\"bundled-js-predefined-d6986cc7102b-1632447f56bf-JavaScript-IU-243.26053.27\" />\r\n      </set>\r\n    </attachedChunks>\r\n  </component>\r\n  <component name=\"SpellCheckerSettings\" RuntimeDictionaries=\"0\" Folders=\"0\" CustomDictionaries=\"0\" DefaultDictionary=\"application-level\" UseSingleDictionary=\"true\" transferred=\"true\" />\r\n  <component name=\"TaskManager\">\r\n    <task active=\"true\" id=\"Default\" summary=\"Default task\">\r\n      <changelist id=\"009fdf8b-d26f-450d-97b7-91f133090639\" name=\"Changes\" comment=\"\" />\r\n      <created>1793864864544</created>\r\n      <option name=\"number\" value=\"Default\" />\r\n      <option name=\"presentableId\" value=\"Default\" />\r\n      <updated>1793864864544</updated>\r\n      <workItem from=\"1793864865727\" duration=\"4243000\" />\r\n      <workItem from=\"1793870803156\" duration=\"529000\" />\r\n      <workItem from=\"1793871378903\" duration=\"860000\" />\r\n      <workItem from=\"1793949266095\" duration=\"214000\" />\r\n      <workItem from=\"1793949533885\" duration=\"50000\" />\r\n      <workItem from=\"1793949600761\" duration=\"77000\" />\r\n      <workItem from=\"1793949719656\" duration=\"239000\" />\r\n      <workItem from=\"1793949973727\" duration=\"89000\" />\r\n      <workItem from=\"1793950098357\" duration=\"17000\" />\r\n      <workItem from=\"1793950227457\" duration=\"2349000\" />\r\n      <workItem from=\"1793953735624\" duration=\"1418000\" />\r\n      <workItem from=\"1793955280227\" duration=\"287000\" />\r\n      <workItem from=\"1793955608473\" duration=\"2230000\" />\r\n      <workItem from=\"1793958612612\" duration=\"895000\" />\r\n      <workItem from=\"1793960063344\" duration=\"393000\" />\r\n      <workItem from=\"1794400764121\" duration=\"423000\" />\r\n      <workItem from=\"1794401243284\" duration=\"623000\" />\r\n      <workItem from=\"1794466536723\" duration=\"2080000\" />\r\n    </task>\r\n    <servers />\r\n  </component>\r\n  <component name=\"TypeScriptGeneratedFilesManager\">\r\n    <option name=\"version\" value=\"3\" />\r\n  </component>\r\n  <component name=\"XDebuggerManager\">\r\n    <breakpoint-manager>\r\n      <breakpoints>\r\n        <line-breakpoint enabled=\"true\" type=\"java-line\">\r\n          <url>file://$PROJECT_DIR$/target/classes/com/example/esp32/Main.class</url>\r\n          <line>21</line>\r\n          <option name=\"timeStamp\" value=\"1\" />\r\n        </line-breakpoint>\r\n      </breakpoints>\r\n    </breakpoint-manager>\r\n  </component>\r\n</project>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/workspace.xml b/.idea/workspace.xml
+--- a/.idea/workspace.xml	(revision 2429be96ec8222bd8588611c07ef6046a0a76708)
++++ b/.idea/workspace.xml	(date 1795085149527)
+@@ -5,16 +5,16 @@
+   </component>
+   <component name="ChangeListManager">
+     <list default="true" id="009fdf8b-d26f-450d-97b7-91f133090639" name="Changes" comment="">
+-      <change afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/utils/AppExit.java" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/esp32/ble/BluetoothService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/ble/BluetoothService.java" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/esp32/ble/MockBluetoothService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/ble/MockBluetoothService.java" afterDir="false" />
+       <change beforePath="$PROJECT_DIR$/src/main/java/com/example/esp32/ble/SimpleBleService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/ble/SimpleBleService.java" afterDir="false" />
+-      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/esp32/ui/LoginFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/ui/LoginFrame.java" afterDir="false" />
+-      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/esp32/ui/MainFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/ui/MainFrame.java" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/esp32/model/PayloadBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/model/PayloadBuilder.java" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ble/BluetoothService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ble/BluetoothService.class" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ble/MockBluetoothService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ble/MockBluetoothService.class" afterDir="false" />
+       <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ble/SimpleBleService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ble/SimpleBleService.class" afterDir="false" />
+-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/LoginFrame.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/LoginFrame.class" afterDir="false" />
+-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$1.class" afterDir="false" />
+-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$2.class" afterDir="false" />
+-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame.class" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/model/PayloadBuilder.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/model/PayloadBuilder.class" afterDir="false" />
+     </list>
+     <option name="SHOW_DIALOG" value="false" />
+     <option name="HIGHLIGHT_CONFLICTS" value="true" />
+@@ -31,18 +31,9 @@
+   <component name="Git.Settings">
+     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
+   </component>
+-  <component name="GitHubPullRequestSearchHistory">{
+-  &quot;lastFilter&quot;: {
+-    &quot;state&quot;: &quot;OPEN&quot;,
+-    &quot;assignee&quot;: &quot;LaureWOLFF&quot;
+-  }
+-}</component>
+-  <component name="GithubPullRequestsUISettings">{
+-  &quot;selectedUrlAndAccountId&quot;: {
+-    &quot;url&quot;: &quot;https://github.com/LaureWOLFF/Fall_module&quot;,
+-    &quot;accountId&quot;: &quot;3f9bd1bb-ed70-43b7-ae34-cce7211c027d&quot;
+-  }
+-}</component>
++  <component name="ProblemsViewState">
++    <option name="selectedTabId" value="ProjectErrors" />
++  </component>
+   <component name="ProjectColorInfo">{
+   &quot;associatedIndex&quot;: 0
+ }</component>
+@@ -108,8 +99,8 @@
+   <component name="SharedIndexes">
+     <attachedChunks>
+       <set>
+-        <option value="bundled-jdk-9823dce3aa75-a94e463ab2e7-intellij.indexing.shared.core-IU-243.26053.27" />
+-        <option value="bundled-js-predefined-d6986cc7102b-1632447f56bf-JavaScript-IU-243.26053.27" />
++        <option value="bundled-jdk-9823dce3aa75-125ca727e0f0-intellij.indexing.shared.core-IU-243.23654.153" />
++        <option value="bundled-js-predefined-d6986cc7102b-822845ee3bb5-JavaScript-IU-243.23654.153" />
+       </set>
+     </attachedChunks>
+   </component>
+@@ -130,20 +121,25 @@
+       <workItem from="1793949719656" duration="239000" />
+       <workItem from="1793949973727" duration="89000" />
+       <workItem from="1793950098357" duration="17000" />
+-      <workItem from="1793950227457" duration="2349000" />
+-      <workItem from="1793953735624" duration="1418000" />
+-      <workItem from="1793955280227" duration="287000" />
+-      <workItem from="1793955608473" duration="2230000" />
+-      <workItem from="1793958612612" duration="895000" />
+-      <workItem from="1793960063344" duration="393000" />
+-      <workItem from="1794400764121" duration="423000" />
+-      <workItem from="1794401243284" duration="623000" />
+-      <workItem from="1794466536723" duration="2080000" />
++      <workItem from="1793950227457" duration="840000" />
++      <workItem from="1794554752950" duration="3043000" />
++      <workItem from="1795080073071" duration="2448000" />
+     </task>
+     <servers />
+   </component>
+   <component name="TypeScriptGeneratedFilesManager">
+     <option name="version" value="3" />
++  </component>
++  <component name="Vcs.Log.Tabs.Properties">
++    <option name="TAB_STATES">
++      <map>
++        <entry key="MAIN">
++          <value>
++            <State />
++          </value>
++        </entry>
++      </map>
++    </option>
+   </component>
+   <component name="XDebuggerManager">
+     <breakpoint-manager>
