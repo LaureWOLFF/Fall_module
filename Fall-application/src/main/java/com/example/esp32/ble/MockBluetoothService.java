@@ -1,9 +1,16 @@
 package com.example.esp32.ble;
 
+import com.example.esp32.model.PayloadBuilder;
 import java.util.List;
 
 public class MockBluetoothService implements BluetoothService {
     private boolean connected;
+    private BleDataListener listener;
+
+    private final BleDevice mockDevice =
+            new BleDevice("ESP32C6-Demo", "AA:BB:CC:DD:EE:01", -45);
+
+
 
     @Override
     public List<BleDevice> scan(int durationMs) throws Exception {
@@ -31,4 +38,16 @@ public class MockBluetoothService implements BluetoothService {
 
     @Override
     public boolean isConnected() { return connected; }
+
+    // ble/MockBluetoothService. addition
+    @Override
+    public void listen(BleDataListener listener) { this.listener = listener; }
+
+
+    /** Simule une notification envoyée par l'ESP32. */
+    public void simulateNotification(byte[] data) {
+        if (listener != null) {
+            listener.onDataReceived(mockDevice, data.clone());
+        }
+    }
 }

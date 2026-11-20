@@ -1,5 +1,6 @@
 package com.example.esp32.ble;
-
+import com.example.esp32.model.PayloadBuilder;
+import java.util.concurrent.CopyOnWriteArrayList;
 import com.example.esp32.Config;
 import org.simplejavable.Adapter;
 import org.simplejavable.BluetoothUUID;
@@ -16,6 +17,13 @@ public class SimpleBleService implements BluetoothService {
     private Adapter adapter;
     private final Map<String, Peripheral> found = new HashMap<>();
     private Peripheral current;
+
+    // Service UART-like standard : à aligner avec le firmware ESP32
+    private static final UUID SERVICE_UUID = UUID.fromString("6e400001-b5a3-f393-e0a9-e50e24dcca9e");
+    private static final UUID TX_CHARACTERISTIC_UUID =  UUID.fromString("6e400002-b5a3-f393-e0a9-e50e24dcca9e");// ESP32 → central
+    private static final UUID CCCD_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
+
+    private final CopyOnWriteArrayList<BleDataListener> listeners = new CopyOnWriteArrayList<>();
 
     @Override
     public List<BleDevice> scan(int durationMs) throws Exception {
@@ -96,6 +104,8 @@ public class SimpleBleService implements BluetoothService {
         }
     }
 
+
+
     @Override
     public void disconnect() {
         if (current != null) {
@@ -108,5 +118,33 @@ public class SimpleBleService implements BluetoothService {
     public boolean isConnected() {
         try { return current != null && current.isConnected(); }
         catch (Exception e) { return false; }
+    }
+
+    @Override
+    public void listen(BleDataListener listener) {
+        if (listener != null) listeners.addIfAbsent(listener);
+        connectAndSubscribe();
+    }
+
+    private void connectAndSubscribe() {
+        // 1. Scanner jusqu'à trouver l'ESP32 (nom ou SERVICE_UUID annoncé)
+        // 2. Se connecter (GATT connect)
+        // 3. Après onServicesDiscovered :
+        //    BluetoothGattCharacteristic tx =
+        //        gatt.getService(SERVICE_UUID).getCharacteristic(TX_CHARACTERISTIC_UUID);
+        //    gatt.setCharacteristicNotification(tx, true);   // active la réception locale
+        //
+        //    BluetoothGattDescriptor cccd = tx.getDescriptor(CCCD_UUID);
+        //    cccd.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+        //    gatt.writeDescriptor(cccd);                     // dit à l'ESP32 "envoie-moi tout"
+    }
+
+    /** Callback invoqué à chaque notification de l'ESP32. */
+    private void onCharacteristicChanged(BleDevice source, byte[] data) {
+        String payload = new String(data, java.nio.charset.StandardCharsets.UTF_8);
+        String[] decoded = PayloadBuilder.parse(payload);
+        for (BleDataListener l : listeners) {
+            l.onDataReceived(source, data);
+        }
     }
 }

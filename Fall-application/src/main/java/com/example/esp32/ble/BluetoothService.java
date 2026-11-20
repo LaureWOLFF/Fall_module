@@ -6,6 +6,7 @@ public interface BluetoothService {
     List<BleDevice> scan(int durationMs) throws Exception;
     void connect(BleDevice device) throws Exception;
     void send(String data) throws Exception;
+    void listen (BleDataListener listener) throws Exception;
     void disconnect();
     boolean isConnected();
 }
