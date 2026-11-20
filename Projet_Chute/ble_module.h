@@ -1,8 +1,7 @@
 #pragma once
 #include <Arduino.h>
 
-// Démarre le serveur BLE (service + caractéristique en écriture) et l'annonce.
 void ble_init();
-
-// true si un client (le PC) est connecté.
-bool ble_connected();
+bool ble_connected();                       // un PC est connecté
+bool ble_ready();                           // connecté ET le PC a envoyé CMD=SYNC
+void ble_send_line(const String &line);     // envoie une ligne au PC (notification)

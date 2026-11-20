@@ -34,10 +34,15 @@ public class MainFrame extends JFrame {
     private final JButton sendBtn = new JButton("Envoyer");
 
     private final JTextField nameField = new JTextField(15);
-    private final JTextField valueField = new JTextField(15);
+    private final JTextField ageField = new JTextField(15);
     private final JTextArea messageArea = new JTextArea(3, 15);
     private final JTextArea logArea = new JTextArea(8, 40);
     private final JLabel statusLabel = new JLabel("Non connecté");
+
+    private final JLabel recvEvtLabel = new JLabel("-");
+    private final JLabel recvIdLabel  = new JLabel("-");
+    private final JLabel recvAgoLabel = new JLabel("-");
+
     private final ScheduledExecutorService watchdog = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r, "ble-watchdog");
         t.setDaemon(true);
@@ -66,10 +71,16 @@ public class MainFrame extends JFrame {
         setLayout(new BorderLayout(10, 10));
         ((JComponent) getContentPane()).setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        add(buildDevicePanel(), BorderLayout.WEST);
-        add(buildFormPanel(), BorderLayout.CENTER);
-        add(buildLogPanel(), BorderLayout.SOUTH);
+        JPanel centerPanel = new JPanel();
+        centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
+        centerPanel.add(buildFormPanel());
+        centerPanel.add(Box.createVerticalStrut(8)); // petit espacement vertical
+        centerPanel.add(receivedFormPanel());
+
         add(buildTopBar(), BorderLayout.NORTH);
+        add(buildDevicePanel(), BorderLayout.WEST);
+        add(centerPanel, BorderLayout.CENTER);
+        add(buildLogPanel(), BorderLayout.SOUTH);
 
         scanBtn.addActionListener(e -> onScan());
         connectBtn.addActionListener(e -> onConnect());
@@ -105,17 +116,47 @@ public class MainFrame extends JFrame {
         c.fill = GridBagConstraints.HORIZONTAL;
         c.weightx = 1;
 
-        c.gridx = 0; c.gridy = 0; c.weightx = 0; p.add(new JLabel("Nom :"), c);
+        c.gridx = 0; c.gridy = 0; c.weightx = 0; p.add(new JLabel("Nom/Name :"), c);
         c.gridx = 1; c.weightx = 1;              p.add(nameField, c);
-        c.gridx = 0; c.gridy = 1; c.weightx = 0; p.add(new JLabel("Valeur :"), c);
-        c.gridx = 1; c.weightx = 1;              p.add(valueField, c);
-        c.gridx = 0; c.gridy = 2; c.weightx = 0; p.add(new JLabel("Message :"), c);
+        c.gridx = 0; c.gridy = 1; c.weightx = 0; p.add(new JLabel("Age :"), c);
+        c.gridx = 1; c.weightx = 1;              p.add(ageField, c);
+        //c.gridx = 0; c.gridy = 2; c.weightx = 0; p.add(new JLabel("Antécedent(s) médical(s) \n (evanouisements, anciennes chutes, autres ...)"), c);
+        c.gridx = 0; c.gridy = 2; c.weightx = 0; p.add(new JLabel("<html>Antécédents médicaux<br><span color:gray;'>(évanouissements, anciennes chutes, autres...)</span></html>"), c);
         c.gridx = 1; c.weightx = 1;              p.add(new JScrollPane(messageArea), c);
 
         c.gridx = 0; c.gridy = 3; c.gridwidth = 2;
         p.add(sendBtn, c);
         c.gridy = 4;
         p.add(statusLabel, c);
+        return p;
+    }
+
+    private JPanel receivedFormPanel() {
+        JPanel p = new JPanel(new GridBagLayout());
+        p.setBorder(BorderFactory.createTitledBorder("Données reçues"));
+        GridBagConstraints c = new GridBagConstraints();
+        c.insets = new Insets(5, 5, 5, 5);
+        c.fill = GridBagConstraints.HORIZONTAL;
+
+        // EVT
+        c.gridx = 0; c.gridy = 0; c.weightx = 0;
+        p.add(new JLabel("Événement (EVT) :"), c);
+        c.gridx = 1; c.weightx = 1;
+        recvEvtLabel.setFont(recvEvtLabel.getFont().deriveFont(Font.BOLD));
+        p.add(recvEvtLabel, c);
+
+        // ID
+        c.gridx = 0; c.gridy = 1; c.weightx = 0;
+        p.add(new JLabel("ID :"), c);
+        c.gridx = 1; c.weightx = 1;
+        p.add(recvIdLabel, c);
+
+        // AGO
+        c.gridx = 0; c.gridy = 3; c.weightx = 0;
+        p.add(new JLabel("Il y a (AGO) :"), c);
+        c.gridx = 1; c.weightx = 1;
+        p.add(recvAgoLabel, c);
+
         return p;
     }
 
@@ -201,15 +242,56 @@ public class MainFrame extends JFrame {
 
     private void onSend() {
         String name = nameField.getText();
-        String value = valueField.getText();
-        if (name.isBlank() && value.isBlank() && messageArea.getText().isBlank()) {
+        String age = ageField.getText();
+        if (name.isBlank() && age.isBlank() && messageArea.getText().isBlank()) {
             log("Rien à envoyer.");
             return;
         }
-        String payload = PayloadBuilder.build(name, value, messageArea.getText());
+        String payload = PayloadBuilder.build(name, age, messageArea.getText());
         log("Envoi : " + payload.trim());
         setBusy(true);
         runAsync(() -> { ble.send(payload); return payload; }, p -> log("Envoyé."));
+    }
+
+    public void OnReceived(String rawFrame) {
+        if (rawFrame == null || rawFrame.isBlank()) {
+            return;
+        }
+
+        String cleanFrame = rawFrame.trim();
+        String evt = "-";
+        String id  = "-";
+        String ago = "-";
+
+        for (String token : cleanFrame.split(";")) {
+            String[] kv = token.split("=", 2);
+            if (kv.length == 2) {
+                String key = kv[0].trim();
+                String val = kv[1].trim();
+                switch (key) {
+                    case "EVT" -> evt = val;
+                    case "ID"  -> id  = val;
+                    case "AGO" -> ago = val;
+                    default    -> {}
+                }
+            }
+        }
+
+        final String fEvt = evt;
+        final String fId  = id;
+        final String fAgo = ago;
+
+        SwingUtilities.invokeLater(() -> {
+            recvEvtLabel.setText(fEvt);
+            recvIdLabel.setText(fId);
+            recvAgoLabel.setText(fAgo);
+
+            if ("FALL".equalsIgnoreCase(fEvt)) {
+                recvEvtLabel.setForeground(Color.RED);
+            } else {
+                recvEvtLabel.setForeground(new Color(0, 128, 0));
+            }
+        });
     }
 
     private void shutdown() {
