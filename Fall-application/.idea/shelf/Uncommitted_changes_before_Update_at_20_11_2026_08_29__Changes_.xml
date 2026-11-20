@@ -1,0 +1,12 @@
+<changelist name="Uncommitted_changes_before_Update_at_20_11_2026_08_29_[Changes]" date="1795159803380" recycled="true" deleted="true">
+  <option name="PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_20_11_2026_08_29_[Changes]/shelved.patch" />
+  <option name="DESCRIPTION" value="Uncommitted changes before Update at 20/11/2026 08:29 [Changes]" />
+  <binary>
+    <option name="BEFORE_PATH" value="../IA_Training" />
+  </binary>
+  <binary>
+    <option name="BEFORE_PATH" value="target/classes/com/example/esp32/ui/MainFrame.class" />
+    <option name="AFTER_PATH" value="target/classes/com/example/esp32/ui/MainFrame.class" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_20_11_2026_08_29_[Changes]/MainFrame.class" />
+  </binary>
+</changelist>

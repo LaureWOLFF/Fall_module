@@ -22,6 +22,9 @@ public class SimpleBleService implements BluetoothService {
     private static final UUID SERVICE_UUID = UUID.fromString("6e400001-b5a3-f393-e0a9-e50e24dcca9e");
     private static final UUID TX_CHARACTERISTIC_UUID =  UUID.fromString("6e400002-b5a3-f393-e0a9-e50e24dcca9e");// ESP32 → central
     private static final UUID CCCD_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
+    private static final BluetoothUUID TX_CHARACTERISTIC = new BluetoothUUID(Config.TX_CHAR_UUID);
+    private BleDevice currentDevice;
+    private boolean subscribed = false;
 
     private final CopyOnWriteArrayList<BleDataListener> listeners = new CopyOnWriteArrayList<>();
 
@@ -61,6 +64,8 @@ public class SimpleBleService implements BluetoothService {
             try {
                 p.connect();
                 current = p;
+                currentDevice = device;
+                connectAndSubscribe();
                 return;
             } catch (Exception e) {
                 last = e;
@@ -112,6 +117,8 @@ public class SimpleBleService implements BluetoothService {
             try { current.disconnect(); } catch (Exception ignored) {}
             current = null;
         }
+        currentDevice = null;
+        subscribed = false;
     }
 
     @Override
@@ -126,7 +133,7 @@ public class SimpleBleService implements BluetoothService {
         connectAndSubscribe();
     }
 
-    private void connectAndSubscribe() {
+    private synchronized void connectAndSubscribe() {
         // 1. Scanner jusqu'à trouver l'ESP32 (nom ou SERVICE_UUID annoncé)
         // 2. Se connecter (GATT connect)
         // 3. Après onServicesDiscovered :
@@ -137,12 +144,25 @@ public class SimpleBleService implements BluetoothService {
         //    BluetoothGattDescriptor cccd = tx.getDescriptor(CCCD_UUID);
         //    cccd.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
         //    gatt.writeDescriptor(cccd);                     // dit à l'ESP32 "envoie-moi tout"
+        /** S'abonne aux notifications de l'ESP32 (une seule fois par connexion). */
+        if (subscribed || current == null || listeners.isEmpty()) return;
+        try {
+            current.notify(SERVICE, TX_CHARACTERISTIC,
+                    data -> onCharacteristicChanged(currentDevice, data));
+            subscribed = true;
+        } catch (Exception e) {
+            System.err.println("Abonnement impossible : " + e.getMessage());
+        }
     }
+
 
     /** Callback invoqué à chaque notification de l'ESP32. */
     private void onCharacteristicChanged(BleDevice source, byte[] data) {
-        String payload = new String(data, java.nio.charset.StandardCharsets.UTF_8);
-        String[] decoded = PayloadBuilder.parse(payload);
+//        String payload = new String(data, java.nio.charset.StandardCharsets.UTF_8);
+//        String[] decoded = PayloadBuilder.parse(payload);
+//        for (BleDataListener l : listeners) {
+//            l.onDataReceived(source, data);
+//        }
         for (BleDataListener l : listeners) {
             l.onDataReceived(source, data);
         }

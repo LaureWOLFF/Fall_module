@@ -1,0 +1,253 @@
+Index: src/main/java/com/example/esp32/ui/MainFrame.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.esp32.ui;\r\n\r\nimport com.example.esp32.Config;\r\nimport com.example.esp32.ble.BleDevice;\r\nimport com.example.esp32.ble.BluetoothService;\r\nimport com.example.esp32.model.PayloadBuilder;\r\nimport com.example.esp32.utils.AppExit;\r\nimport com.example.esp32.auth.AuthService;\r\n\r\nimport javax.swing.*;\r\nimport java.awt.*;\r\nimport java.time.LocalTime;\r\nimport java.time.format.DateTimeFormatter;\r\nimport java.util.List;\r\nimport java.util.concurrent.Callable;\r\nimport java.util.function.Consumer;\r\nimport java.util.concurrent.Executors;\r\nimport java.util.concurrent.ScheduledExecutorService;\r\nimport java.util.concurrent.TimeUnit;\r\n\r\npublic class MainFrame extends JFrame {\r\n\r\n    private final BluetoothService ble;\r\n\r\n    private final DefaultListModel<BleDevice> deviceModel = new DefaultListModel<>();\r\n    private final JList<BleDevice> deviceList = new JList<>(deviceModel);\r\n\r\n    private final AuthService auth;\r\n    private final String username;\r\n\r\n    private final JButton scanBtn = new JButton(\"Scanner\");\r\n    private final JButton connectBtn = new JButton(\"Connecter\");\r\n    private final JButton disconnectBtn = new JButton(\"Déconnecter\");\r\n    private final JButton sendBtn = new JButton(\"Envoyer\");\r\n\r\n    private final JTextField nameField = new JTextField(15);\r\n    private final JTextField ageField = new JTextField(15);\r\n    private final JTextArea messageArea = new JTextArea(3, 15);\r\n    private final JTextArea logArea = new JTextArea(8, 40);\r\n    private final JLabel statusLabel = new JLabel(\"Non connecté\");\r\n\r\n    private final JLabel recvEvtLabel = new JLabel(\"-\");\r\n    private final JLabel recvIdLabel  = new JLabel(\"-\");\r\n    private final JLabel recvAgoLabel = new JLabel(\"-\");\r\n\r\n    private final ScheduledExecutorService watchdog = Executors.newSingleThreadScheduledExecutor(r -> {\r\n        Thread t = new Thread(r, \"ble-watchdog\");\r\n        t.setDaemon(true);\r\n        return t;\r\n    });\r\n    private volatile boolean wasConnected = false;\r\n\r\n    public MainFrame(String username, AuthService auth, BluetoothService ble) {\r\n        super(\"ESP32-C6 Controller - \" + username);\r\n        this.username = username;\r\n        this.auth = auth;\r\n        this.ble = ble;\r\n        buildUI();\r\n        updateButtons();\r\n        watchdog.scheduleWithFixedDelay(this::checkConnection, 1500, 1500, TimeUnit.MILLISECONDS);\r\n    }\r\n\r\n    // ---------- Construction de l'interface ----------\r\n\r\n    private void buildUI() {\r\n        setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);\r\n        addWindowListener(new java.awt.event.WindowAdapter() {\r\n            @Override public void windowClosing(java.awt.event.WindowEvent e) { shutdown(); }\r\n        });\r\n\r\n        setLayout(new BorderLayout(10, 10));\r\n        ((JComponent) getContentPane()).setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));\r\n\r\n        JPanel centerPanel = new JPanel();\r\n        centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));\r\n        centerPanel.add(buildFormPanel());\r\n        centerPanel.add(Box.createVerticalStrut(8)); // petit espacement vertical\r\n        centerPanel.add(receivedFormPanel());\r\n\r\n        add(buildTopBar(), BorderLayout.NORTH);\r\n        add(buildDevicePanel(), BorderLayout.WEST);\r\n        add(centerPanel, BorderLayout.CENTER);\r\n        add(buildLogPanel(), BorderLayout.SOUTH);\r\n\r\n        scanBtn.addActionListener(e -> onScan());\r\n        connectBtn.addActionListener(e -> onConnect());\r\n        disconnectBtn.addActionListener(e -> onDisconnect());\r\n        sendBtn.addActionListener(e -> onSend());\r\n        deviceList.addListSelectionListener(e -> updateButtons());\r\n\r\n        pack();\r\n        setLocationRelativeTo(null);\r\n    }\r\n\r\n    private JPanel buildDevicePanel() {\r\n        JPanel p = new JPanel(new BorderLayout(5, 5));\r\n        p.setBorder(BorderFactory.createTitledBorder(\"Appareils Bluetooth\"));\r\n        deviceList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);\r\n        JScrollPane scroll = new JScrollPane(deviceList);\r\n        scroll.setPreferredSize(new Dimension(260, 150));\r\n        p.add(scroll, BorderLayout.CENTER);\r\n\r\n        JPanel buttons = new JPanel(new GridLayout(3, 1, 5, 5));\r\n        buttons.add(scanBtn);\r\n        buttons.add(connectBtn);\r\n        buttons.add(disconnectBtn);\r\n        p.add(buttons, BorderLayout.SOUTH);\r\n        return p;\r\n    }\r\n\r\n    private JPanel buildFormPanel() {\r\n        JPanel p = new JPanel(new GridBagLayout());\r\n        p.setBorder(BorderFactory.createTitledBorder(\"Données à envoyer\"));\r\n        GridBagConstraints c = new GridBagConstraints();\r\n        c.insets = new Insets(5, 5, 5, 5);\r\n        c.fill = GridBagConstraints.HORIZONTAL;\r\n        c.weightx = 1;\r\n\r\n        c.gridx = 0; c.gridy = 0; c.weightx = 0; p.add(new JLabel(\"Nom/Name :\"), c);\r\n        c.gridx = 1; c.weightx = 1;              p.add(nameField, c);\r\n        c.gridx = 0; c.gridy = 1; c.weightx = 0; p.add(new JLabel(\"Age :\"), c);\r\n        c.gridx = 1; c.weightx = 1;              p.add(ageField, c);\r\n        //c.gridx = 0; c.gridy = 2; c.weightx = 0; p.add(new JLabel(\"Antécedent(s) médical(s) \\n (evanouisements, anciennes chutes, autres ...)\"), c);\r\n        c.gridx = 0; c.gridy = 2; c.weightx = 0; p.add(new JLabel(\"<html>Antécédents médicaux<br><span color:gray;'>(évanouissements, anciennes chutes, autres...)</span></html>\"), c);\r\n        c.gridx = 1; c.weightx = 1;              p.add(new JScrollPane(messageArea), c);\r\n\r\n        c.gridx = 0; c.gridy = 3; c.gridwidth = 2;\r\n        p.add(sendBtn, c);\r\n        c.gridy = 4;\r\n        p.add(statusLabel, c);\r\n        return p;\r\n    }\r\n\r\n    private JPanel receivedFormPanel() {\r\n        JPanel p = new JPanel(new GridBagLayout());\r\n        p.setBorder(BorderFactory.createTitledBorder(\"Données reçues\"));\r\n        GridBagConstraints c = new GridBagConstraints();\r\n        c.insets = new Insets(5, 5, 5, 5);\r\n        c.fill = GridBagConstraints.HORIZONTAL;\r\n\r\n        // EVT\r\n        c.gridx = 0; c.gridy = 0; c.weightx = 0;\r\n        p.add(new JLabel(\"Événement (EVT) :\"), c);\r\n        c.gridx = 1; c.weightx = 1;\r\n        recvEvtLabel.setFont(recvEvtLabel.getFont().deriveFont(Font.BOLD));\r\n        p.add(recvEvtLabel, c);\r\n\r\n        // ID\r\n        c.gridx = 0; c.gridy = 1; c.weightx = 0;\r\n        p.add(new JLabel(\"ID :\"), c);\r\n        c.gridx = 1; c.weightx = 1;\r\n        p.add(recvIdLabel, c);\r\n\r\n        // AGO\r\n        c.gridx = 0; c.gridy = 3; c.weightx = 0;\r\n        p.add(new JLabel(\"Il y a (AGO) :\"), c);\r\n        c.gridx = 1; c.weightx = 1;\r\n        p.add(recvAgoLabel, c);\r\n\r\n        return p;\r\n    }\r\n\r\n    private JScrollPane buildLogPanel() {\r\n        logArea.setEditable(false);\r\n        JScrollPane s = new JScrollPane(logArea);\r\n        s.setBorder(BorderFactory.createTitledBorder(\"Journal\"));\r\n        return s;\r\n    }\r\n\r\n    // ---------- Actions ----------\r\n\r\n    private void onScan() {\r\n        log(\"Scan en cours (\" + Config.SCAN_DURATION_MS / 1000 + \" s)...\");\r\n        setBusy(true);\r\n        runAsync(() -> ble.scan(Config.SCAN_DURATION_MS), (List<BleDevice> devices) -> {\r\n            deviceModel.clear();\r\n            devices.forEach(deviceModel::addElement);\r\n            log(devices.size() + \" appareil(s) trouvé(s).\");\r\n        });\r\n    }\r\n\r\n    private void onConnect() {\r\n        BleDevice d = deviceList.getSelectedValue();\r\n        if (d == null) return;\r\n        log(\"Connexion à \" + d + \"...\");\r\n        setBusy(true);\r\n        runAsync(() -> { ble.connect(d); return d; }, dev -> {\r\n            wasConnected = true;\r\n            String label = (dev.name() == null || dev.name().isBlank()) ? dev.address() : dev.name();\r\n            statusLabel.setText(\"Connecté à \" + label);\r\n            log(\"Connecté.\");\r\n        });\r\n    }\r\n\r\n    private void onDisconnect() {\r\n        wasConnected = false;\r\n        ble.disconnect();\r\n        statusLabel.setText(\"Non connecté\");\r\n        log(\"Déconnecté.\");\r\n        updateButtons();\r\n    }\r\n\r\n    private JPanel buildTopBar() {\r\n        JLabel who = new JLabel(\"Utilisateur : \" + username);\r\n\r\n        JButton logoutBtn = new JButton(\"Fermer la session\");\r\n        logoutBtn.addActionListener(e -> onLogout());\r\n\r\n        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));\r\n        right.add(logoutBtn);\r\n\r\n        JPanel bar = new JPanel(new BorderLayout());\r\n        bar.add(who, BorderLayout.WEST);\r\n        bar.add(right, BorderLayout.EAST);\r\n        return bar;\r\n    }\r\n\r\n    /** Ferme la session : coupe le Bluetooth puis retourne à l'écran de connexion. */\r\n    private void onLogout() {\r\n        if (ble.isConnected()) {\r\n            int answer = JOptionPane.showConfirmDialog(this,\r\n                    \"La connexion Bluetooth sera coupée. Continuer ?\",\r\n                    \"Fermer la session\", JOptionPane.YES_NO_OPTION);\r\n            if (answer != JOptionPane.YES_OPTION) return;\r\n        }\r\n\r\n        wasConnected = false;\r\n        watchdog.shutdownNow();\r\n        setVisible(false);\r\n\r\n        // Déconnexion dans un thread à part, 1,5 s maximum\r\n        Thread closer = new Thread(() -> {\r\n            try { ble.disconnect(); } catch (Exception ignored) {}\r\n        }, \"ble-close\");\r\n        closer.setDaemon(true);\r\n        closer.start();\r\n        try { closer.join(1500); } catch (InterruptedException ignored) {}\r\n\r\n        dispose();\r\n        new LoginFrame(auth, ble).setVisible(true);\r\n    }\r\n\r\n    private void onSend() {\r\n        String name = nameField.getText();\r\n        String age = ageField.getText();\r\n        if (name.isBlank() && age.isBlank() && messageArea.getText().isBlank()) {\r\n            log(\"Rien à envoyer.\");\r\n            return;\r\n        }\r\n        String payload = PayloadBuilder.build(name, age, messageArea.getText());\r\n        log(\"Envoi : \" + payload.trim());\r\n        setBusy(true);\r\n        runAsync(() -> { ble.send(payload); return payload; }, p -> log(\"Envoyé.\"));\r\n    }\r\n\r\n    public void OnReceived(String rawFrame) {\r\n        if (rawFrame == null || rawFrame.isBlank()) {\r\n            return;\r\n        }\r\n\r\n        String cleanFrame = rawFrame.trim();\r\n        String evt = \"-\";\r\n        String id  = \"-\";\r\n        String ago = \"-\";\r\n\r\n        for (String token : cleanFrame.split(\";\")) {\r\n            String[] kv = token.split(\"=\", 2);\r\n            if (kv.length == 2) {\r\n                String key = kv[0].trim();\r\n                String val = kv[1].trim();\r\n                switch (key) {\r\n                    case \"EVT\" -> evt = val;\r\n                    case \"ID\"  -> id  = val;\r\n                    case \"AGO\" -> ago = val;\r\n                    default    -> {}\r\n                }\r\n            }\r\n        }\r\n\r\n        final String fEvt = evt;\r\n        final String fId  = id;\r\n        final String fAgo = ago;\r\n\r\n        SwingUtilities.invokeLater(() -> {\r\n            recvEvtLabel.setText(fEvt);\r\n            recvIdLabel.setText(fId);\r\n            recvAgoLabel.setText(fAgo);\r\n\r\n            if (\"FALL\".equalsIgnoreCase(fEvt)) {\r\n                recvEvtLabel.setForeground(Color.RED);\r\n            } else {\r\n                recvEvtLabel.setForeground(new Color(0, 128, 0));\r\n            }\r\n        });\r\n    }\r\n\r\n    private void shutdown() {\r\n        watchdog.shutdownNow();\r\n        setVisible(false);\r\n\r\n        Thread closer = new Thread(() -> {\r\n            try { ble.disconnect(); } catch (Exception ignored) {}\r\n        }, \"ble-close\");\r\n        closer.setDaemon(true);\r\n        closer.start();\r\n        try { closer.join(1500); } catch (InterruptedException ignored) {}\r\n\r\n        dispose();\r\n        AppExit.now();\r\n    }\r\n\r\n    // ---------- Utilitaires ----------\r\n\r\n    /* Exécute une tâche bloquante hors du thread UI, puis rappelle onOk sur le thread UI. */\r\n    private <T> void runAsync(Callable<T> task, Consumer<T> onOk) {\r\n        new SwingWorker<T, Void>() {\r\n            @Override protected T doInBackground() throws Exception { return task.call(); }\r\n            @Override protected void done() {\r\n                try {\r\n                    onOk.accept(get());\r\n                } catch (Exception ex) {\r\n                    Throwable root = ex.getCause() != null ? ex.getCause() : ex;\r\n                    log(\"Erreur : \" + root.getMessage());\r\n                } finally {\r\n                    setBusy(false);\r\n                }\r\n            }\r\n        }.execute();\r\n    }\r\n\r\n    private void setBusy(boolean busy) {\r\n        setCursor(busy ? Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR) : Cursor.getDefaultCursor());\r\n        if (busy) {\r\n            scanBtn.setEnabled(false);\r\n            connectBtn.setEnabled(false);\r\n            disconnectBtn.setEnabled(false);\r\n            sendBtn.setEnabled(false);\r\n        } else {\r\n            updateButtons();\r\n        }\r\n    }\r\n\r\n    private void updateButtons() {\r\n        boolean connected = ble.isConnected();\r\n        if (!connected && !statusLabel.getText().equals(\"Non connecté\")) {\r\n            statusLabel.setText(\"Non connecté\");\r\n            wasConnected = false;\r\n        }\r\n        scanBtn.setEnabled(true);\r\n        connectBtn.setEnabled(!connected && deviceList.getSelectedValue() != null);\r\n        disconnectBtn.setEnabled(connected);\r\n        sendBtn.setEnabled(connected);\r\n    }\r\n\r\n    /* Tourne en arrière-plan : détecte une connexion rompue par l'appareil. */\r\n    private volatile int missed = 0;\r\n\r\n    private void checkConnection() {\r\n        if (!wasConnected || ble.isConnected()) {\r\n            missed = 0;\r\n            return;\r\n        }\r\n        if (++missed >= 2) {\r\n            missed = 0;\r\n            wasConnected = false;\r\n            SwingUtilities.invokeLater(() -> {\r\n                log(\"Connexion perdue : l'appareil s'est déconnecté.\");\r\n                updateButtons();\r\n            });\r\n        }\r\n    }\r\n\r\n    private void log(String msg) {\r\n        String t = LocalTime.now().format(DateTimeFormatter.ofPattern(\"HH:mm:ss\"));\r\n        logArea.append(\"[\" + t + \"] \" + msg + \"\\n\");\r\n        logArea.setCaretPosition(logArea.getDocument().getLength());\r\n    }\r\n\r\n\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/main/java/com/example/esp32/ui/MainFrame.java b/src/main/java/com/example/esp32/ui/MainFrame.java
+--- a/src/main/java/com/example/esp32/ui/MainFrame.java	(revision 981af310131d5eade34b6df9d1048e5e4fffd643)
++++ b/src/main/java/com/example/esp32/ui/MainFrame.java	(date 1795158418553)
+@@ -6,6 +6,7 @@
+ import com.example.esp32.model.PayloadBuilder;
+ import com.example.esp32.utils.AppExit;
+ import com.example.esp32.auth.AuthService;
++import com.example.esp32.utils.LineAssembler;
+ 
+ import javax.swing.*;
+ import java.awt.*;
+@@ -17,6 +18,7 @@
+ import java.util.concurrent.Executors;
+ import java.util.concurrent.ScheduledExecutorService;
+ import java.util.concurrent.TimeUnit;
++import java.util.concurrent.ExecutorService;
+ 
+ public class MainFrame extends JFrame {
+ 
+@@ -28,6 +30,13 @@
+     private final AuthService auth;
+     private final String username;
+ 
++    private final LineAssembler assembler = new LineAssembler(this::OnReceived);
++    private final ExecutorService ioExecutor = Executors.newSingleThreadExecutor(r -> {
++        Thread t = new Thread(r, "ble-io");
++        t.setDaemon(true);
++        return t;
++    });
++
+     private final JButton scanBtn = new JButton("Scanner");
+     private final JButton connectBtn = new JButton("Connecter");
+     private final JButton disconnectBtn = new JButton("Déconnecter");
+@@ -57,6 +66,11 @@
+         this.ble = ble;
+         buildUI();
+         updateButtons();
++        try {
++            ble.listen((source, data) -> assembler.feed(data));
++        } catch (Exception e) {
++            log("Erreur écoute : " + e.getMessage());
++        }
+         watchdog.scheduleWithFixedDelay(this::checkConnection, 1500, 1500, TimeUnit.MILLISECONDS);
+     }
+ 
+@@ -121,7 +135,7 @@
+         c.gridx = 0; c.gridy = 1; c.weightx = 0; p.add(new JLabel("Age :"), c);
+         c.gridx = 1; c.weightx = 1;              p.add(ageField, c);
+         //c.gridx = 0; c.gridy = 2; c.weightx = 0; p.add(new JLabel("Antécedent(s) médical(s) \n (evanouisements, anciennes chutes, autres ...)"), c);
+-        c.gridx = 0; c.gridy = 2; c.weightx = 0; p.add(new JLabel("<html>Antécédents médicaux<br><span color:gray;'>(évanouissements, anciennes chutes, autres...)</span></html>"), c);
++        c.gridx = 0; c.gridy = 2; c.weightx = 0; p.add(new JLabel("<html>Antécédents médicaux<br><span style='color:gray;'>(évanouissements, anciennes chutes, autres...)</span></html>"), c);
+         c.gridx = 1; c.weightx = 1;              p.add(new JScrollPane(messageArea), c);
+ 
+         c.gridx = 0; c.gridy = 3; c.gridwidth = 2;
+@@ -189,6 +203,7 @@
+             String label = (dev.name() == null || dev.name().isBlank()) ? dev.address() : dev.name();
+             statusLabel.setText("Connecté à " + label);
+             log("Connecté.");
++            sendAsync("CMD=SYNC\n");     // sans ça, l'ESP32 n'envoie rien
+         });
+     }
+ 
+@@ -292,6 +307,11 @@
+                 recvEvtLabel.setForeground(new Color(0, 128, 0));
+             }
+         });
++
++        // Confirme à l'ESP32 qu'on a bien reçu la chute (sinon il la renverra à la prochaine synchro)
++        if ("FALL".equalsIgnoreCase(fEvt) && fId.matches("\\d+")) {
++            sendAsync("ACK=" + fId + "\n");
++        }
+     }
+ 
+     private void shutdown() {
+@@ -376,5 +396,16 @@
+         logArea.setCaretPosition(logArea.getDocument().getLength());
+     }
+ 
++    /** Envoie un message dans un thread à part, pour ne jamais bloquer l'interface ni la réception. */
++    private void sendAsync(String text) {
++        ioExecutor.submit(() -> {
++            try {
++                ble.send(text);
++            } catch (Exception e) {
++                SwingUtilities.invokeLater(() -> log("Erreur envoi : " + e.getMessage()));
++            }
++        });
++    }
++
+ 
+ }
+Index: .idea/workspace.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<project version=\"4\">\r\n  <component name=\"AutoImportSettings\">\r\n    <option name=\"autoReloadType\" value=\"SELECTIVE\" />\r\n  </component>\r\n  <component name=\"ChangeListManager\">\r\n    <list default=\"true\" id=\"009fdf8b-d26f-450d-97b7-91f133090639\" name=\"Changes\" comment=\"\">\r\n      <change beforePath=\"$PROJECT_DIR$/.idea/workspace.xml\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/.idea/workspace.xml\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/src/main/java/com/example/esp32/ui/MainFrame.java\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/src/main/java/com/example/esp32/ui/MainFrame.java\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$1.class\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$1.class\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$2.class\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$2.class\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame.class\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame.class\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/../Projet_Chute/Projet_Chute.ino\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/../Projet_Chute/Projet_Chute.ino\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/../Projet_Chute/ble_module.cpp\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/../Projet_Chute/ble_module.cpp\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/../Projet_Chute/ble_module.h\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/../Projet_Chute/ble_module.h\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/../Projet_Chute/config.h\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/../Projet_Chute/config.h\" afterDir=\"false\" />\r\n    </list>\r\n    <option name=\"SHOW_DIALOG\" value=\"false\" />\r\n    <option name=\"HIGHLIGHT_CONFLICTS\" value=\"true\" />\r\n    <option name=\"HIGHLIGHT_NON_ACTIVE_CHANGELIST\" value=\"false\" />\r\n    <option name=\"LAST_RESOLUTION\" value=\"IGNORE\" />\r\n  </component>\r\n  <component name=\"FileTemplateManagerImpl\">\r\n    <option name=\"RECENT_TEMPLATES\">\r\n      <list>\r\n        <option value=\"Class\" />\r\n      </list>\r\n    </option>\r\n  </component>\r\n  <component name=\"Git.Settings\">\r\n    <option name=\"RECENT_GIT_ROOT_PATH\" value=\"$PROJECT_DIR$/..\" />\r\n    <option name=\"UPDATE_TYPE\" value=\"REBASE\" />\r\n  </component>\r\n  <component name=\"GitHubPullRequestSearchHistory\">{\r\n  &quot;lastFilter&quot;: {\r\n    &quot;state&quot;: &quot;OPEN&quot;,\r\n    &quot;assignee&quot;: &quot;LaureWOLFF&quot;\r\n  }\r\n}</component>\r\n  <component name=\"GithubPullRequestsUISettings\">{\r\n  &quot;selectedUrlAndAccountId&quot;: {\r\n    &quot;url&quot;: &quot;https://github.com/LaureWOLFF/Fall_module&quot;,\r\n    &quot;accountId&quot;: &quot;3f9bd1bb-ed70-43b7-ae34-cce7211c027d&quot;\r\n  }\r\n}</component>\r\n  <component name=\"ProjectColorInfo\">{\r\n  &quot;associatedIndex&quot;: 0\r\n}</component>\r\n  <component name=\"ProjectId\" id=\"3Lg9UY0V2XFr93TUJFuP8DAWZOp\" />\r\n  <component name=\"ProjectViewState\">\r\n    <option name=\"hideEmptyMiddlePackages\" value=\"true\" />\r\n    <option name=\"showLibraryContents\" value=\"true\" />\r\n  </component>\r\n  <component name=\"PropertiesComponent\">{\r\n  &quot;keyToString&quot;: {\r\n    &quot;Application.Main.executor&quot;: &quot;Run&quot;,\r\n    &quot;Application.com.example.esp32.Main.executor&quot;: &quot;Run&quot;,\r\n    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,\r\n    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,\r\n    &quot;git-widget-placeholder&quot;: &quot;main&quot;,\r\n    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,\r\n    &quot;last_opened_file_path&quot;: &quot;C:/3A_EVE_Projet_Fall_module/Fall-application&quot;,\r\n    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,\r\n    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,\r\n    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,\r\n    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,\r\n    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,\r\n    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,\r\n    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,\r\n    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,\r\n    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;\r\n  }\r\n}</component>\r\n  <component name=\"RunManager\" selected=\"Application.com.example.esp32.Main\">\r\n    <configuration name=\"Main\" type=\"Application\" factoryName=\"Application\" nameIsGenerated=\"true\">\r\n      <option name=\"ALTERNATIVE_JRE_PATH\" value=\"23\" />\r\n      <option name=\"ALTERNATIVE_JRE_PATH_ENABLED\" value=\"true\" />\r\n      <module name=\"Fall-application\" />\r\n      <extension name=\"coverage\">\r\n        <pattern>\r\n          <option name=\"PATTERN\" value=\"com.example.esp32.*\" />\r\n          <option name=\"ENABLED\" value=\"true\" />\r\n        </pattern>\r\n      </extension>\r\n      <method v=\"2\">\r\n        <option name=\"Make\" enabled=\"true\" />\r\n      </method>\r\n    </configuration>\r\n    <configuration name=\"com.example.esp32.Main\" type=\"Application\" factoryName=\"Application\" temporary=\"true\" nameIsGenerated=\"true\">\r\n      <option name=\"MAIN_CLASS_NAME\" value=\"com.example.esp32.Main\" />\r\n      <module name=\"Fall-application\" />\r\n      <extension name=\"coverage\">\r\n        <pattern>\r\n          <option name=\"PATTERN\" value=\"com.example.esp32.*\" />\r\n          <option name=\"ENABLED\" value=\"true\" />\r\n        </pattern>\r\n      </extension>\r\n      <method v=\"2\">\r\n        <option name=\"Make\" enabled=\"true\" />\r\n      </method>\r\n    </configuration>\r\n    <recent_temporary>\r\n      <list>\r\n        <item itemvalue=\"Application.com.example.esp32.Main\" />\r\n      </list>\r\n    </recent_temporary>\r\n  </component>\r\n  <component name=\"SharedIndexes\">\r\n    <attachedChunks>\r\n      <set>\r\n        <option value=\"bundled-jdk-9823dce3aa75-a94e463ab2e7-intellij.indexing.shared.core-IU-243.26053.27\" />\r\n        <option value=\"bundled-js-predefined-d6986cc7102b-1632447f56bf-JavaScript-IU-243.26053.27\" />\r\n      </set>\r\n    </attachedChunks>\r\n  </component>\r\n  <component name=\"SpellCheckerSettings\" RuntimeDictionaries=\"0\" Folders=\"0\" CustomDictionaries=\"0\" DefaultDictionary=\"application-level\" UseSingleDictionary=\"true\" transferred=\"true\" />\r\n  <component name=\"TaskManager\">\r\n    <task active=\"true\" id=\"Default\" summary=\"Default task\">\r\n      <changelist id=\"009fdf8b-d26f-450d-97b7-91f133090639\" name=\"Changes\" comment=\"\" />\r\n      <created>1793864864544</created>\r\n      <option name=\"number\" value=\"Default\" />\r\n      <option name=\"presentableId\" value=\"Default\" />\r\n      <updated>1793864864544</updated>\r\n      <workItem from=\"1793864865727\" duration=\"4243000\" />\r\n      <workItem from=\"1793870803156\" duration=\"529000\" />\r\n      <workItem from=\"1793871378903\" duration=\"860000\" />\r\n      <workItem from=\"1793949266095\" duration=\"214000\" />\r\n      <workItem from=\"1793949533885\" duration=\"50000\" />\r\n      <workItem from=\"1793949600761\" duration=\"77000\" />\r\n      <workItem from=\"1793949719656\" duration=\"239000\" />\r\n      <workItem from=\"1793949973727\" duration=\"89000\" />\r\n      <workItem from=\"1793950098357\" duration=\"17000\" />\r\n      <workItem from=\"1793950227457\" duration=\"2349000\" />\r\n      <workItem from=\"1793953735624\" duration=\"1418000\" />\r\n      <workItem from=\"1793955280227\" duration=\"287000\" />\r\n      <workItem from=\"1793955608473\" duration=\"2230000\" />\r\n      <workItem from=\"1793958612612\" duration=\"895000\" />\r\n      <workItem from=\"1793960063344\" duration=\"393000\" />\r\n      <workItem from=\"1794400764121\" duration=\"423000\" />\r\n      <workItem from=\"1794401243284\" duration=\"623000\" />\r\n      <workItem from=\"1794466536723\" duration=\"2080000\" />\r\n      <workItem from=\"1794468858848\" duration=\"1768000\" />\r\n      <workItem from=\"1795083301811\" duration=\"2613000\" />\r\n      <workItem from=\"1795100296553\" duration=\"1728000\" />\r\n    </task>\r\n    <servers />\r\n  </component>\r\n  <component name=\"TypeScriptGeneratedFilesManager\">\r\n    <option name=\"version\" value=\"3\" />\r\n  </component>\r\n  <component name=\"XDebuggerManager\">\r\n    <breakpoint-manager>\r\n      <breakpoints>\r\n        <line-breakpoint enabled=\"true\" type=\"java-line\">\r\n          <url>file://$PROJECT_DIR$/target/classes/com/example/esp32/Main.class</url>\r\n          <line>21</line>\r\n          <option name=\"timeStamp\" value=\"1\" />\r\n        </line-breakpoint>\r\n      </breakpoints>\r\n    </breakpoint-manager>\r\n  </component>\r\n</project>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/workspace.xml b/.idea/workspace.xml
+--- a/.idea/workspace.xml	(revision 981af310131d5eade34b6df9d1048e5e4fffd643)
++++ b/.idea/workspace.xml	(date 1795159771125)
+@@ -4,16 +4,12 @@
+     <option name="autoReloadType" value="SELECTIVE" />
+   </component>
+   <component name="ChangeListManager">
+-    <list default="true" id="009fdf8b-d26f-450d-97b7-91f133090639" name="Changes" comment="">
++    <list default="true" id="009fdf8b-d26f-450d-97b7-91f133090639" name="Changes" comment="&quot;interface ver2 + fct pour affiché les info recues&quot;">
++      <change afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/utils/LineAssembler.java" afterDir="false" />
+       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+       <change beforePath="$PROJECT_DIR$/src/main/java/com/example/esp32/ui/MainFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/ui/MainFrame.java" afterDir="false" />
+-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$1.class" afterDir="false" />
+-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$2.class" afterDir="false" />
+       <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame.class" afterDir="false" />
+-      <change beforePath="$PROJECT_DIR$/../Projet_Chute/Projet_Chute.ino" beforeDir="false" afterPath="$PROJECT_DIR$/../Projet_Chute/Projet_Chute.ino" afterDir="false" />
+-      <change beforePath="$PROJECT_DIR$/../Projet_Chute/ble_module.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/../Projet_Chute/ble_module.cpp" afterDir="false" />
+-      <change beforePath="$PROJECT_DIR$/../Projet_Chute/ble_module.h" beforeDir="false" afterPath="$PROJECT_DIR$/../Projet_Chute/ble_module.h" afterDir="false" />
+-      <change beforePath="$PROJECT_DIR$/../Projet_Chute/config.h" beforeDir="false" afterPath="$PROJECT_DIR$/../Projet_Chute/config.h" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/../IA_Training" beforeDir="false" />
+     </list>
+     <option name="SHOW_DIALOG" value="false" />
+     <option name="HIGHLIGHT_CONFLICTS" value="true" />
+@@ -29,7 +25,6 @@
+   </component>
+   <component name="Git.Settings">
+     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
+-    <option name="UPDATE_TYPE" value="REBASE" />
+   </component>
+   <component name="GitHubPullRequestSearchHistory">{
+   &quot;lastFilter&quot;: {
+@@ -141,12 +136,46 @@
+       <workItem from="1794466536723" duration="2080000" />
+       <workItem from="1794468858848" duration="1768000" />
+       <workItem from="1795083301811" duration="2613000" />
+-      <workItem from="1795100296553" duration="1728000" />
++      <workItem from="1795100296553" duration="2053000" />
++      <workItem from="1795157398251" duration="1631000" />
++    </task>
++    <task id="LOCAL-00001" summary="&quot;interface ver2 + fct pour affiché les info recues&quot;">
++      <option name="closed" value="true" />
++      <created>1795102167295</created>
++      <option name="number" value="00001" />
++      <option name="presentableId" value="LOCAL-00001" />
++      <option name="project" value="LOCAL" />
++      <updated>1795102167295</updated>
+     </task>
++    <task id="LOCAL-00002" summary="&quot;interface ver2 + fct pour affiché les info recues&quot;">
++      <option name="closed" value="true" />
++      <created>1795102246577</created>
++      <option name="number" value="00002" />
++      <option name="presentableId" value="LOCAL-00002" />
++      <option name="project" value="LOCAL" />
++      <updated>1795102246577</updated>
++    </task>
++    <option name="localTasksCounter" value="3" />
+     <servers />
+   </component>
+   <component name="TypeScriptGeneratedFilesManager">
+     <option name="version" value="3" />
++  </component>
++  <component name="Vcs.Log.Tabs.Properties">
++    <option name="TAB_STATES">
++      <map>
++        <entry key="MAIN">
++          <value>
++            <State />
++          </value>
++        </entry>
++      </map>
++    </option>
++  </component>
++  <component name="VcsManagerConfiguration">
++    <MESSAGE value="interface ver2 + fct pour affiché les info recues" />
++    <MESSAGE value="&quot;interface ver2 + fct pour affiché les info recues&quot;" />
++    <option name="LAST_COMMIT_MESSAGE" value="&quot;interface ver2 + fct pour affiché les info recues&quot;" />
+   </component>
+   <component name="XDebuggerManager">
+     <breakpoint-manager>
+Index: src/main/java/com/example/esp32/utils/LineAssembler.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/main/java/com/example/esp32/utils/LineAssembler.java b/src/main/java/com/example/esp32/utils/LineAssembler.java
+new file mode 100644
+--- /dev/null	(date 1795157968492)
++++ b/src/main/java/com/example/esp32/utils/LineAssembler.java	(date 1795157968492)
+@@ -0,0 +1,58 @@
++package com.example.esp32.utils;
++
++import java.nio.charset.StandardCharsets;
++import java.util.concurrent.Executors;
++import java.util.concurrent.ScheduledExecutorService;
++import java.util.concurrent.ScheduledFuture;
++import java.util.concurrent.TimeUnit;
++import java.util.function.Consumer;
++
++/**
++ * Recolle les paquets Bluetooth (20 octets au plus) en messages complets.
++ * Un message se termine par '\n'. Si plus rien n'arrive pendant 300 ms, ce qui a été
++ * reçu est considéré comme un message complet (au cas où le '\n' aurait été retiré en amont).
++ */
++public class LineAssembler {
++
++    private static final int IDLE_FLUSH_MS = 300;
++    private static final int MAX_LENGTH = 1024;
++
++    private final Consumer<String> onLine;
++    private final StringBuilder buffer = new StringBuilder();
++    private final ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor(r -> {
++        Thread t = new Thread(r, "line-assembler");
++        t.setDaemon(true);
++        return t;
++    });
++    private ScheduledFuture<?> pendingFlush;
++
++    /** onLine est appelé avec chaque message complet (depuis un thread de la bibliothèque, pas le thread Swing). */
++    public LineAssembler(Consumer<String> onLine) {
++        this.onLine = onLine;
++    }
++
++    /** À appeler avec chaque paquet reçu. */
++    public synchronized void feed(byte[] data) {
++        buffer.append(new String(data, StandardCharsets.UTF_8));
++
++        int nl;
++        while ((nl = buffer.indexOf("\n")) >= 0) {
++            String line = buffer.substring(0, nl).trim();
++            buffer.delete(0, nl + 1);
++            if (!line.isEmpty()) onLine.accept(line);
++        }
++
++        if (pendingFlush != null) pendingFlush.cancel(false);
++        if (buffer.length() > MAX_LENGTH) {
++            flush();
++        } else if (buffer.length() > 0) {
++            pendingFlush = timer.schedule(this::flush, IDLE_FLUSH_MS, TimeUnit.MILLISECONDS);
++        }
++    }
++
++    private synchronized void flush() {
++        String line = buffer.toString().trim();
++        buffer.setLength(0);
++        if (!line.isEmpty()) onLine.accept(line);
++    }
++}
+\ No newline at end of file

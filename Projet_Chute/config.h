@@ -21,5 +21,5 @@ constexpr uint32_t ALERT_COOLDOWN_MS = 5000;
 constexpr const char* DEVICE_NAME  = "ESP32C6-Demo";
 constexpr const char* SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
 constexpr const char* CHAR_UUID    = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
-constexpr const char* TX_CHAR_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";  // ESP32 -> PC (notification)
+constexpr const char* TX_CHAR_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";  // ESP32 -> PC (notification)
 constexpr uint32_t FALL_COOLDOWN_MS = 10000;   // une seule chute enregistrée toutes les 10 s

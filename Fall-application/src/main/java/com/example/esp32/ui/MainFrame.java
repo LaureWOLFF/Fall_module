@@ -6,6 +6,7 @@ import com.example.esp32.ble.BluetoothService;
 import com.example.esp32.model.PayloadBuilder;
 import com.example.esp32.utils.AppExit;
 import com.example.esp32.auth.AuthService;
+import com.example.esp32.utils.LineAssembler;
 
 import javax.swing.*;
 import java.awt.*;
@@ -17,6 +18,7 @@ import java.util.function.Consumer;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ExecutorService;
 
 public class MainFrame extends JFrame {
 
@@ -27,6 +29,13 @@ public class MainFrame extends JFrame {
 
     private final AuthService auth;
     private final String username;
+
+    private final LineAssembler assembler = new LineAssembler(this::OnReceived);
+    private final ExecutorService ioExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "ble-io");
+        t.setDaemon(true);
+        return t;
+    });
 
     private final JButton scanBtn = new JButton("Scanner");
     private final JButton connectBtn = new JButton("Connecter");
@@ -39,6 +48,7 @@ public class MainFrame extends JFrame {
     private final JTextArea logArea = new JTextArea(8, 40);
     private final JLabel statusLabel = new JLabel("Non connecté");
 
+    private final StringBuilder bleRxBuffer = new StringBuilder();
     private final JLabel recvEvtLabel = new JLabel("-");
     private final JLabel recvIdLabel  = new JLabel("-");
     private final JLabel recvAgoLabel = new JLabel("-");
@@ -57,6 +67,11 @@ public class MainFrame extends JFrame {
         this.ble = ble;
         buildUI();
         updateButtons();
+        try {
+            ble.listen((source, data) -> assembler.feed(data));
+        } catch (Exception e) {
+            log("Erreur écoute : " + e.getMessage());
+        }
         watchdog.scheduleWithFixedDelay(this::checkConnection, 1500, 1500, TimeUnit.MILLISECONDS);
     }
 
@@ -121,7 +136,7 @@ public class MainFrame extends JFrame {
         c.gridx = 0; c.gridy = 1; c.weightx = 0; p.add(new JLabel("Age :"), c);
         c.gridx = 1; c.weightx = 1;              p.add(ageField, c);
         //c.gridx = 0; c.gridy = 2; c.weightx = 0; p.add(new JLabel("Antécedent(s) médical(s) \n (evanouisements, anciennes chutes, autres ...)"), c);
-        c.gridx = 0; c.gridy = 2; c.weightx = 0; p.add(new JLabel("<html>Antécédents médicaux<br><span color:gray;'>(évanouissements, anciennes chutes, autres...)</span></html>"), c);
+        c.gridx = 0; c.gridy = 2; c.weightx = 0; p.add(new JLabel("<html>Antécédents médicaux<br><span style='color:gray;'>(évanouissements, anciennes chutes, autres...)</span></html>"), c);
         c.gridx = 1; c.weightx = 1;              p.add(new JScrollPane(messageArea), c);
 
         c.gridx = 0; c.gridy = 3; c.gridwidth = 2;
@@ -189,6 +204,7 @@ public class MainFrame extends JFrame {
             String label = (dev.name() == null || dev.name().isBlank()) ? dev.address() : dev.name();
             statusLabel.setText("Connecté à " + label);
             log("Connecté.");
+            sendAsync("CMD=SYNC\n");     // sans ça, l'ESP32 n'envoie rien
         });
     }
 
@@ -292,6 +308,11 @@ public class MainFrame extends JFrame {
                 recvEvtLabel.setForeground(new Color(0, 128, 0));
             }
         });
+
+        // Confirme à l'ESP32 qu'on a bien reçu la chute (sinon il la renverra à la prochaine synchro)
+        if ("FALL".equalsIgnoreCase(fEvt) && fId.matches("\\d+")) {
+            sendAsync("ACK=" + fId + "\n");
+        }
     }
 
     private void shutdown() {
@@ -374,6 +395,17 @@ public class MainFrame extends JFrame {
         String t = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
         logArea.append("[" + t + "] " + msg + "\n");
         logArea.setCaretPosition(logArea.getDocument().getLength());
+    }
+
+    /** Envoie un message dans un thread à part, pour ne jamais bloquer l'interface ni la réception. */
+    private void sendAsync(String text) {
+        ioExecutor.submit(() -> {
+            try {
+                ble.send(text);
+            } catch (Exception e) {
+                SwingUtilities.invokeLater(() -> log("Erreur envoi : " + e.getMessage()));
+            }
+        });
     }
 
 

@@ -4,17 +4,19 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="009fdf8b-d26f-450d-97b7-91f133090639" name="Changes" comment="">
+    <list default="true" id="009fdf8b-d26f-450d-97b7-91f133090639" name="Changes" comment="&quot;interface ver2 + fct pour affiché les info recues&quot;">
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/utils/LineAssembler.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/esp32/ble/BluetoothService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/ble/BluetoothService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/esp32/ble/MockBluetoothService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/ble/MockBluetoothService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/esp32/Config.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/Config.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/example/esp32/ble/SimpleBleService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/ble/SimpleBleService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/esp32/model/PayloadBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/model/PayloadBuilder.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ble/BluetoothService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ble/BluetoothService.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ble/MockBluetoothService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ble/MockBluetoothService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/esp32/ui/MainFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/esp32/ui/MainFrame.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/Config.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/Config.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ble/SimpleBleService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ble/SimpleBleService.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/model/PayloadBuilder.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/model/PayloadBuilder.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame$2.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/esp32/ui/MainFrame.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../IA_Training" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -30,6 +32,7 @@
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
+    <option name="UPDATE_TYPE" value="REBASE" />
   </component>
   <component name="GitHubPullRequestSearchHistory">{
   &quot;lastFilter&quot;: {
@@ -71,22 +74,10 @@
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
-  <component name="RunManager" selected="Application.com.example.esp32.Main">
+  <component name="RunManager">
     <configuration name="Main" type="Application" factoryName="Application" nameIsGenerated="true">
       <option name="ALTERNATIVE_JRE_PATH" value="23" />
       <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
-      <module name="Fall-application" />
-      <extension name="coverage">
-        <pattern>
-          <option name="PATTERN" value="com.example.esp32.*" />
-          <option name="ENABLED" value="true" />
-        </pattern>
-      </extension>
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="com.example.esp32.Main" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.example.esp32.Main" />
       <module name="Fall-application" />
       <extension name="coverage">
@@ -99,11 +90,6 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <recent_temporary>
-      <list>
-        <item itemvalue="Application.com.example.esp32.Main" />
-      </list>
-    </recent_temporary>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
@@ -139,6 +125,12 @@
       <workItem from="1794400764121" duration="423000" />
       <workItem from="1794401243284" duration="623000" />
       <workItem from="1794466536723" duration="2080000" />
+      <workItem from="1794468858848" duration="1768000" />
+      <workItem from="1795083301811" duration="2613000" />
+      <workItem from="1795100296553" duration="1728000" />
+      <workItem from="1795163100249" duration="651000" />
+      <workItem from="1795163901617" duration="1828000" />
+      <workItem from="1795165914689" duration="2777000" />
     </task>
     <servers />
   </component>
